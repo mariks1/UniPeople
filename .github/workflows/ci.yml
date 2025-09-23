@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Check formatting with Spotless
+        run: mvn --batch-mode com.diffplug.spotless:spotless-maven-plugin:2.46.1:check
+
+      - name: Build & Test (unit + integration)
+        run: mvn -B -ntp clean verify
