@@ -48,6 +48,9 @@ public class Employee {
   @Builder.Default
   private Status status = Status.ACTIVE;
 
+  @Column(name = "department_id")
+  private UUID departmentId;
+
   @CreatedDate
   @Column(name = "created_at", updatable = false)
   private Instant createdAt;
