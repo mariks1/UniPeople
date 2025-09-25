@@ -10,19 +10,18 @@ import org.springframework.data.annotation.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder(toBuilder = true)
 @Table(name = "employee")
 @EntityListeners(AuditingEntityListener.class)
 public class Employee {
 
-  @Id
-  @Builder.Default
-  private UUID id = UUID.randomUUID();
+  @Id @Builder.Default private UUID id = UUID.randomUUID();
 
-  @Version
-  private Integer version;
+  @Version private Integer version;
 
   @Column(name = "first_name", nullable = false)
   private String firstName;
@@ -59,5 +58,4 @@ public class Employee {
   @LastModifiedDate
   @Column(name = "updated_at")
   private Instant updatedAt;
-
 }

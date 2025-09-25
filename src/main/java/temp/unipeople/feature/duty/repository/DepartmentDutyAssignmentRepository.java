@@ -5,4 +5,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import temp.unipeople.feature.duty.entity.DepartmentDutyAssignment;
 
 public interface DepartmentDutyAssignmentRepository
-        extends JpaRepository<DepartmentDutyAssignment, UUID> {}
+    extends JpaRepository<DepartmentDutyAssignment, UUID> {}

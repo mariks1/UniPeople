@@ -1,24 +1,23 @@
 package temp.unipeople.feature.duty.entity;
 
 import jakarta.persistence.*;
+import java.util.UUID;
 import lombok.*;
 
-import java.util.UUID;
-
 @Entity
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @Table(name = "duty")
 public class Duty {
 
-    @Id private UUID id;
+  @Id private UUID id;
 
-    @Column(nullable = false, unique = true)
-    private String code;
+  @Column(nullable = false, unique = true)
+  private String code;
 
-    @Column(nullable = false)
-    private String name;
-
+  @Column(nullable = false)
+  private String name;
 }
-
