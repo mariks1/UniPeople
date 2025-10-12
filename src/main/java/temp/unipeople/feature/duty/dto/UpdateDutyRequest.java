@@ -7,14 +7,13 @@ import lombok.Data;
 
 @Data
 @Builder
-public class UpdateDutyDto {
+public class UpdateDutyRequest {
 
-    @Pattern(regexp="^(?=.*\\S).+$", message="code must contain a non-space char")
-    @Size(max = 64)
-    String code;
+  @Pattern(regexp = "^(?=.*\\S).+$", message = "code must contain a non-space char")
+  @Size(max = 64)
+  String code;
 
-    @Pattern(regexp="^(?=.*\\S).+$", message="code must contain a non-space char")
-    @Size(max = 150)
-    String name;
-
+  @Pattern(regexp = "^(?=.*\\S).+$", message = "code must contain a non-space char")
+  @Size(max = 150)
+  String name;
 }

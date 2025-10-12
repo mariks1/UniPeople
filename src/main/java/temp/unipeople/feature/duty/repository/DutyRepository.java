@@ -4,4 +4,6 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import temp.unipeople.feature.duty.entity.Duty;
 
-public interface DutyRepository extends JpaRepository<Duty, UUID> {}
+public interface DutyRepository extends JpaRepository<Duty, UUID> {
+  boolean existsByCodeIgnoreCase(String code);
+}

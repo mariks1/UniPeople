@@ -7,14 +7,13 @@ import lombok.Data;
 
 @Data
 @Builder
-public class CreateDutyDto {
+public class CreateDutyRequest {
 
-    @NotBlank
-    @Size(max = 64)
-    private String code;
+  @NotBlank
+  @Size(max = 64)
+  private String code;
 
-    @NotBlank
-    @Size(max = 150)
-    private String name;
-
+  @NotBlank
+  @Size(max = 150)
+  private String name;
 }
