@@ -12,7 +12,11 @@ import temp.unipeople.feature.faculty.entity.Faculty;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "department")
 public class Department {
 
