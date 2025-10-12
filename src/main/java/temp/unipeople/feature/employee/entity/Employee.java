@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.*;
 import org.springframework.data.annotation.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import temp.unipeople.feature.department.entity.Department;
 
 @Entity
 @Getter
@@ -19,7 +20,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 public class Employee {
 
-  @Id @Builder.Default private UUID id = UUID.randomUUID();
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @Version private Integer version;
 
@@ -48,8 +51,9 @@ public class Employee {
   @Builder.Default
   private Status status = Status.ACTIVE;
 
-  @Column(name = "department_id")
-  private UUID departmentId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "department_id", foreignKey = @ForeignKey(name = "fk_employee_department"))
+  private Department department;
 
   @CreatedDate
   @Column(name = "created_at", updatable = false)

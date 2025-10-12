@@ -12,7 +12,9 @@ import lombok.*;
 @Builder
 @Table(name = "faculty")
 public class Faculty {
-  @Id private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @Column(nullable = false, unique = true)
   private String code;

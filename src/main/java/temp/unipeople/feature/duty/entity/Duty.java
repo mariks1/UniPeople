@@ -13,7 +13,9 @@ import lombok.*;
 @Table(name = "duty")
 public class Duty {
 
-  @Id private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @Column(nullable = false, unique = true)
   private String code;
