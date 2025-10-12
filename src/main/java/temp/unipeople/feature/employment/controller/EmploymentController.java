@@ -1,7 +1,5 @@
 package temp.unipeople.feature.employment.controller;
 
-import java.util.UUID;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -10,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +23,9 @@ import temp.unipeople.feature.employment.service.EmploymentService;
 @RestController
 @RequestMapping("/api/v1/employments")
 @RequiredArgsConstructor
-@Tag(name = "Employment", description = "Штатные назначения: создание, обновление, закрытие, выборки")
+@Tag(
+    name = "Employment",
+    description = "Штатные назначения: создание, обновление, закрытие, выборки")
 public class EmploymentController {
 
   private final EmploymentService employmentService;
@@ -38,9 +39,9 @@ public class EmploymentController {
 
   @Operation(summary = "Создать назначение (приём/перевод)")
   @ApiResponses({
-          @ApiResponse(responseCode = "201"),
-          @ApiResponse(responseCode = "400", description = "Неверные даты/ставка/перекрытия"),
-          @ApiResponse(responseCode = "409", description = "Конфликт уникальности/целостности")
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "400", description = "Неверные даты/ставка/перекрытия"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности/целостности")
   })
   @PostMapping
   public ResponseEntity<EmploymentDto> create(@RequestBody CreateEmploymentDto body) {
@@ -65,8 +66,13 @@ public class EmploymentController {
   }
 
   @Operation(summary = "История назначений сотрудника (пагинация)")
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name="X-Total-Count", description="Общее количество записей", schema=@Schema(type="integer")))
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
   public ResponseEntity<Page<EmploymentDto>> listByEmployee(
       @PathVariable UUID employeeId, Pageable pageable) {
@@ -77,9 +83,15 @@ public class EmploymentController {
   }
 
   @Operation(summary = "Назначения по департаменту (active=true по умолчанию)")
-  @Parameters(@Parameter(name="active", description="Только активные на сегодня (default=true)"))
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name="X-Total-Count", description="Общее количество записей", schema=@Schema(type="integer")))
+  @Parameters(
+      @Parameter(name = "active", description = "Только активные на сегодня (default=true)"))
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping("/by-department/{departmentId}")
   public ResponseEntity<Page<EmploymentDto>> listByDepartment(
       @PathVariable UUID departmentId,

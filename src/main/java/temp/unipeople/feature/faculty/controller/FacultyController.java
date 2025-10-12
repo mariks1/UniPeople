@@ -1,11 +1,10 @@
 package temp.unipeople.feature.faculty.controller;
 
-import java.util.UUID;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -32,7 +31,10 @@ public class FacultyController {
   }
 
   @Operation(summary = "Создать факультет")
-  @ApiResponses({@ApiResponse(responseCode = "201"), @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
+  })
   @PostMapping
   public ResponseEntity<FacultyDto> create(@RequestBody CreateFacultyDto dto) {
     var saved = service.create(dto);

@@ -19,7 +19,8 @@ public interface EmploymentRepository extends JpaRepository<Employment, UUID> {
   Page<Employment> findByDepartmentIdAndStatus(
       UUID departmentId, Employment.Status status, Pageable pageable);
 
-  @Query("""
+  @Query(
+      """
   select e from Employment e
   where e.employeeId = :emp
     and e.departmentId = :dept

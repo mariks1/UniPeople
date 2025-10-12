@@ -28,11 +28,18 @@ public class PositionController {
 
   private final PositionService positionService;
 
-  @Operation(summary = "Список должностей (пагинация)",
-          description = "Фильтрация по части названия через параметр q. X-Total-Count в заголовке.")
-  @Parameters(@Parameter(name="q", description="Подстрока в названии (contains, case-insensitive)"))
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name="X-Total-Count", description="Общее количество записей", schema=@Schema(type="integer")))
+  @Operation(
+      summary = "Список должностей (пагинация)",
+      description = "Фильтрация по части названия через параметр q. X-Total-Count в заголовке.")
+  @Parameters(
+      @Parameter(name = "q", description = "Подстрока в названии (contains, case-insensitive)"))
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<PositionDto>> findAll(
       @RequestParam(required = false) String q, Pageable pageable) {
@@ -50,7 +57,10 @@ public class PositionController {
   }
 
   @Operation(summary = "Создать должность")
-  @ApiResponses({@ApiResponse(responseCode = "201"), @ApiResponse(responseCode = "409", description = "Название уже существует")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "409", description = "Название уже существует")
+  })
   @PostMapping
   public ResponseEntity<PositionDto> create(@Valid @RequestBody CreatePositionDto body) {
     PositionDto created = positionService.create(body);
@@ -58,7 +68,11 @@ public class PositionController {
   }
 
   @Operation(summary = "Обновить должность")
-  @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404"), @ApiResponse(responseCode = "409", description = "Конфликт уникальности")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "404"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности")
+  })
   @PutMapping("/{id}")
   public ResponseEntity<PositionDto> update(
       @PathVariable UUID id, @Valid @RequestBody UpdatePositionDto body) {
@@ -66,7 +80,11 @@ public class PositionController {
   }
 
   @Operation(summary = "Удалить должность")
-  @ApiResponses({@ApiResponse(responseCode = "204"), @ApiResponse(responseCode = "404"), @ApiResponse(responseCode = "409", description = "Есть связанные назначения")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "204"),
+    @ApiResponse(responseCode = "404"),
+    @ApiResponse(responseCode = "409", description = "Есть связанные назначения")
+  })
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     positionService.delete(id);

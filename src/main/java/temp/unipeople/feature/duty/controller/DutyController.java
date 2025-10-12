@@ -29,9 +29,16 @@ public class DutyController {
   private final DutyService service;
   private final DutyAssignmentService assignmentService;
 
-  @Operation(summary = "Список обязанностей (пагинация)", description = "X-Total-Count — общее количество.")
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name="X-Total-Count", description="Общее число записей", schema=@Schema(type="integer")))
+  @Operation(
+      summary = "Список обязанностей (пагинация)",
+      description = "X-Total-Count — общее количество.")
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее число записей",
+              schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<DutyDto>> findAll(Pageable pageable) {
     Page<DutyDto> page = service.findAll(pageable);
@@ -42,8 +49,8 @@ public class DutyController {
 
   @Operation(summary = "Получить обязанность по ID")
   @ApiResponses({
-          @ApiResponse(responseCode = "200"),
-          @ApiResponse(responseCode = "404", description = "Обязанность не найдена")
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "404", description = "Обязанность не найдена")
   })
   @GetMapping("/{id}")
   public ResponseEntity<DutyDto> get(@PathVariable UUID id) {
@@ -52,8 +59,8 @@ public class DutyController {
 
   @Operation(summary = "Создать обязанность")
   @ApiResponses({
-          @ApiResponse(responseCode = "201"),
-          @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
   public ResponseEntity<DutyDto> create(@Valid @RequestBody CreateDutyDto dto) {
@@ -63,9 +70,9 @@ public class DutyController {
 
   @Operation(summary = "Обновить обязанность")
   @ApiResponses({
-          @ApiResponse(responseCode = "200"),
-          @ApiResponse(responseCode = "404", description = "Обязанность не найдена"),
-          @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "404", description = "Обязанность не найдена"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PutMapping("/{id}")
   public ResponseEntity<DutyDto> update(
@@ -75,9 +82,9 @@ public class DutyController {
 
   @Operation(summary = "Удалить обязанность")
   @ApiResponses({
-          @ApiResponse(responseCode = "204"),
-          @ApiResponse(responseCode = "404", description = "Обязанность не найдена"),
-          @ApiResponse(responseCode = "409", description = "Есть связанные назначения")
+    @ApiResponse(responseCode = "204"),
+    @ApiResponse(responseCode = "404", description = "Обязанность не найдена"),
+    @ApiResponse(responseCode = "409", description = "Есть связанные назначения")
   })
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
@@ -85,10 +92,16 @@ public class DutyController {
     return ResponseEntity.noContent().build();
   }
 
-  @Operation(summary = "Назначения по обязанности (пагинация)",
-          description = "Для аналитики/поиска. X-Total-Count в заголовке.")
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name = "X-Total-Count", description = "Общее количество записей", schema = @Schema(type = "integer")))
+  @Operation(
+      summary = "Назначения по обязанности (пагинация)",
+      description = "Для аналитики/поиска. X-Total-Count в заголовке.")
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping("/{id}/assignments")
   public ResponseEntity<Page<DutyAssignmentDto>> listAssignments(
       @PathVariable UUID id, Pageable pageable) {

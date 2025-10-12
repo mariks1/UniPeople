@@ -1,9 +1,5 @@
 package temp.unipeople.feature.employee.controller;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.UUID;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -12,6 +8,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,9 +31,16 @@ public class EmployeeController {
 
   private final EmployeeService employeeService;
 
-  @Operation(summary = "Список сотрудников (пагинация)", description = "X-Total-Count содержит общее число записей.")
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name = "X-Total-Count", description = "Общее число записей", schema = @Schema(type="integer")))
+  @Operation(
+      summary = "Список сотрудников (пагинация)",
+      description = "X-Total-Count содержит общее число записей.")
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее число записей",
+              schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<EmployeeDto>> findAll(Pageable pageable) {
     Page<EmployeeDto> employees = employeeService.findAll(pageable);
@@ -44,14 +50,21 @@ public class EmployeeController {
   }
 
   @Operation(
-          summary = "Поток сотрудников (infinite scroll)",
-          description = """
-        Возвращает { items, hasNext, nextCursor }. 
+      summary = "Поток сотрудников (infinite scroll)",
+      description =
+          """
+        Возвращает { items, hasNext, nextCursor }.
         Курсор — Instant (createdAt последнего элемента предыдущей страницы).
       """)
   @Parameters({
-          @Parameter(name="cursor", description="Курсор (Instant, ISO-8601)", schema=@Schema(type="string", format="date-time")),
-          @Parameter(name="size", description="Размер страницы, по умолчанию 20", schema=@Schema(type="integer", maximum="50"))
+    @Parameter(
+        name = "cursor",
+        description = "Курсор (Instant, ISO-8601)",
+        schema = @Schema(type = "string", format = "date-time")),
+    @Parameter(
+        name = "size",
+        description = "Размер страницы, по умолчанию 20",
+        schema = @Schema(type = "integer", maximum = "50"))
   })
   @GetMapping("/stream")
   public ResponseEntity<Map<String, Object>> stream(
@@ -62,8 +75,8 @@ public class EmployeeController {
 
   @Operation(summary = "Получить сотрудника по id")
   @ApiResponses({
-          @ApiResponse(responseCode = "200"),
-          @ApiResponse(responseCode = "404", description = "Не найден")
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "404", description = "Не найден")
   })
   @GetMapping("/{id}")
   public ResponseEntity<EmployeeDto> get(@PathVariable("id") UUID id) {
@@ -72,8 +85,8 @@ public class EmployeeController {
 
   @Operation(summary = "Создать сотрудника")
   @ApiResponses({
-          @ApiResponse(responseCode = "201"),
-          @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
   public ResponseEntity<EmployeeDto> create(@RequestBody CreateEmployeeDto body) {

@@ -37,9 +37,9 @@ public class LeaveRequestController {
 
   @Operation(summary = "Создать заявку на отпуск")
   @ApiResponses({
-          @ApiResponse(responseCode = "201"),
-          @ApiResponse(responseCode = "400", description = "Неверные даты/пересечения/лимит"),
-          @ApiResponse(responseCode = "404", description = "Тип не найден")
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "400", description = "Неверные даты/пересечения/лимит"),
+    @ApiResponse(responseCode = "404", description = "Тип не найден")
   })
   @PostMapping
   public ResponseEntity<LeaveRequestDto> create(@Valid @RequestBody CreateLeaveRequestDto body) {
@@ -47,7 +47,11 @@ public class LeaveRequestController {
   }
 
   @Operation(summary = "Обновить заявку (DRAFT/PENDING)")
-  @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "400"), @ApiResponse(responseCode = "404")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "400"),
+    @ApiResponse(responseCode = "404")
+  })
   @PatchMapping("/{id}")
   public ResponseEntity<LeaveRequestDto> update(
       @PathVariable UUID id, @Valid @RequestBody UpdateLeaveRequestDto body) {
@@ -55,7 +59,11 @@ public class LeaveRequestController {
   }
 
   @Operation(summary = "Одобрить заявку")
-  @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "400"), @ApiResponse(responseCode = "404")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "400"),
+    @ApiResponse(responseCode = "404")
+  })
   @PostMapping("/{id}/approve")
   public ResponseEntity<LeaveRequestDto> approve(
       @PathVariable UUID id, @Valid @RequestBody DecisionDto body) {
@@ -63,7 +71,11 @@ public class LeaveRequestController {
   }
 
   @Operation(summary = "Отклонить заявку")
-  @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "400"), @ApiResponse(responseCode = "404")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "400"),
+    @ApiResponse(responseCode = "404")
+  })
   @PostMapping("/{id}/reject")
   public ResponseEntity<LeaveRequestDto> reject(
       @PathVariable UUID id, @Valid @RequestBody DecisionDto body) {
@@ -71,15 +83,24 @@ public class LeaveRequestController {
   }
 
   @Operation(summary = "Отменить заявку (PENDING/APPROVED)")
-  @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "400"), @ApiResponse(responseCode = "404")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "200"),
+    @ApiResponse(responseCode = "400"),
+    @ApiResponse(responseCode = "404")
+  })
   @PostMapping("/{id}/cancel")
   public ResponseEntity<LeaveRequestDto> cancel(@PathVariable UUID id) {
     return ResponseEntity.ok(service.cancel(id));
   }
 
   @Operation(summary = "Заявки сотрудника (пагинация)")
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name="X-Total-Count", description="Общее количество записей", schema=@Schema(type="integer")))
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
   public ResponseEntity<Page<LeaveRequestDto>> byEmployee(
       @PathVariable UUID employeeId, Pageable p) {
@@ -90,8 +111,13 @@ public class LeaveRequestController {
   }
 
   @Operation(summary = "Заявки по статусу (пагинация)")
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name="X-Total-Count", description="Общее количество записей", schema=@Schema(type="integer")))
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<LeaveRequestDto>> byStatus(
       @RequestParam LeaveRequest.Status status, Pageable p) {

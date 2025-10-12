@@ -26,10 +26,16 @@ public class LeaveTypeController {
 
   private final LeaveService service;
 
-  @Operation(summary = "Список типов отпусков (пагинация)",
-          description = "X-Total-Count в заголовке.")
-  @ApiResponse(responseCode = "200",
-          headers = @Header(name="X-Total-Count", description="Общее количество записей", schema=@Schema(type="integer")))
+  @Operation(
+      summary = "Список типов отпусков (пагинация)",
+      description = "X-Total-Count в заголовке.")
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<LeaveTypeDto>> list(Pageable p) {
     var page = service.listTypes(p);
@@ -39,7 +45,10 @@ public class LeaveTypeController {
   }
 
   @Operation(summary = "Создать тип отпуска")
-  @ApiResponses({@ApiResponse(responseCode = "201"), @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
+  })
   @PostMapping
   public ResponseEntity<LeaveTypeDto> create(@Valid @RequestBody CreateLeaveTypeDto body) {
     return ResponseEntity.status(HttpStatus.CREATED).body(service.createType(body));
@@ -54,7 +63,11 @@ public class LeaveTypeController {
   }
 
   @Operation(summary = "Удалить тип отпуска")
-  @ApiResponses({@ApiResponse(responseCode = "204"), @ApiResponse(responseCode = "404"), @ApiResponse(responseCode = "409", description = "Есть связанные заявки")})
+  @ApiResponses({
+    @ApiResponse(responseCode = "204"),
+    @ApiResponse(responseCode = "404"),
+    @ApiResponse(responseCode = "409", description = "Есть связанные заявки")
+  })
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     service.deleteType(id);

@@ -27,17 +27,17 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
   List<LeaveRequest> findOverlaps(
       @Param("emp") UUID emp, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
-  @Query(value = """
+  @Query(
+      value =
+          """
   select coalesce(sum((r.date_to - r.date_from + 1)), 0)::int
   from leave_request r
   where r.employee_id = :emp
     and r.type_id     = :type
     and r.status      = 'APPROVED'
     and extract(year from r.date_from) = :year
-""", nativeQuery = true)
+""",
+      nativeQuery = true)
   int sumApprovedDaysForYear(
-          @Param("emp")  UUID emp,
-          @Param("type") UUID type,
-          @Param("year") int year);
-
+      @Param("emp") UUID emp, @Param("type") UUID type, @Param("year") int year);
 }
