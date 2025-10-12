@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class UpdateDepartmentDto {
+public class UpdateDepartmentRequest {
   String code;
   String name;
   UUID facultyId;

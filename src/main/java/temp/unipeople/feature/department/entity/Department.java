@@ -6,8 +6,12 @@ import java.util.UUID;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import temp.unipeople.feature.employee.entity.Employee;
+import temp.unipeople.feature.faculty.entity.Faculty;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,7 +20,9 @@ import org.springframework.data.annotation.LastModifiedDate;
 @Table(name = "department")
 public class Department {
 
-  @Id private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @Column(nullable = false, unique = true)
   private String code;
@@ -24,11 +30,13 @@ public class Department {
   @Column(nullable = false)
   private String name;
 
-  @Column(name = "faculty_id", nullable = false)
-  private UUID facultyId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "faculty_id")
+  private Faculty faculty;
 
-  @Column(name = "head_employee_id")
-  private UUID headEmployeeId;
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "head_employee_id")
+  private Employee headEmployee;
 
   @CreatedDate
   @Column(name = "created_at", updatable = false)

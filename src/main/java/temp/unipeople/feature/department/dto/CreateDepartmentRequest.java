@@ -8,7 +8,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class CreateDepartmentDto {
+public class CreateDepartmentRequest {
 
   @NotBlank String code;
   @NotBlank String name;
