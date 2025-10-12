@@ -10,9 +10,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import temp.unipeople.feature.department.dto.CreateDepartmentRequest;
+import temp.unipeople.feature.department.dto.CreateDepartmentDto;
 import temp.unipeople.feature.department.dto.DepartmentDto;
-import temp.unipeople.feature.department.dto.UpdateDepartmentRequest;
+import temp.unipeople.feature.department.dto.UpdateDepartmentDto;
 import temp.unipeople.feature.department.entity.Department;
 import temp.unipeople.feature.department.mapper.DepartmentMapper;
 import temp.unipeople.feature.department.repository.DepartmentRepository;
@@ -39,7 +39,7 @@ public class DepartmentService {
   }
 
   @Transactional
-  public DepartmentDto create(CreateDepartmentRequest dto) {
+  public DepartmentDto create(CreateDepartmentDto dto) {
     Department e = mapper.toEntity(dto);
     e.setFaculty(em.getReference(Faculty.class, dto.getFacultyId()));
     if (dto.getHeadEmployeeId() != null) {
@@ -50,7 +50,7 @@ public class DepartmentService {
   }
 
   @Transactional
-  public DepartmentDto update(UUID id, UpdateDepartmentRequest dto) {
+  public DepartmentDto update(UUID id, UpdateDepartmentDto dto) {
     Department e =
         departmentRepository
             .findById(id)
