@@ -10,10 +10,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import temp.unipeople.feature.duty.dto.CreateDutyRequest;
+import temp.unipeople.feature.duty.dto.CreateDutyDto;
 import temp.unipeople.feature.duty.dto.DutyAssignmentDto;
 import temp.unipeople.feature.duty.dto.DutyDto;
-import temp.unipeople.feature.duty.dto.UpdateDutyRequest;
+import temp.unipeople.feature.duty.dto.UpdateDutyDto;
 import temp.unipeople.feature.duty.entity.DepartmentDutyAssignment;
 import temp.unipeople.feature.duty.entity.Duty;
 import temp.unipeople.feature.duty.mapper.DutyAssignmentMapper;
@@ -52,7 +52,7 @@ public class DutyService {
   }
 
   @Transactional
-  public DutyDto create(CreateDutyRequest dto) {
+  public DutyDto create(CreateDutyDto dto) {
     if (dutyRepository.existsByCodeIgnoreCase(dto.getCode())) {
       throw new IllegalStateException("duty code already exists");
     }
@@ -66,7 +66,7 @@ public class DutyService {
   }
 
   @Transactional
-  public DutyDto update(UUID id, UpdateDutyRequest dto) {
+  public DutyDto update(UUID id, UpdateDutyDto dto) {
     Duty e =
         dutyRepository
             .findById(id)
