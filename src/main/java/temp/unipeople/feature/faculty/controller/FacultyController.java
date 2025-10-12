@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import temp.unipeople.feature.faculty.dto.CreateFacultyRequest;
+import temp.unipeople.feature.faculty.dto.CreateFacultyDto;
 import temp.unipeople.feature.faculty.dto.FacultyDto;
-import temp.unipeople.feature.faculty.dto.UpdateFacultyRequest;
+import temp.unipeople.feature.faculty.dto.UpdateFacultyDto;
 import temp.unipeople.feature.faculty.service.FacultyService;
 
 @Slf4j
@@ -24,14 +24,14 @@ public class FacultyController {
   }
 
   @PostMapping
-  public ResponseEntity<FacultyDto> create(@RequestBody CreateFacultyRequest dto) {
+  public ResponseEntity<FacultyDto> create(@RequestBody CreateFacultyDto dto) {
     var saved = service.create(dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(saved);
   }
 
   @PutMapping("/{id}")
   public ResponseEntity<FacultyDto> update(
-      @PathVariable("id") UUID id, @RequestBody UpdateFacultyRequest body) {
+      @PathVariable("id") UUID id, @RequestBody UpdateFacultyDto body) {
     return ResponseEntity.ok(service.update(id, body));
   }
 }
