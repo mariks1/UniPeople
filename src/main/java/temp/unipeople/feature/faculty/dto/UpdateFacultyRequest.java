@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class UpdateFacultyDto {
+public class UpdateFacultyRequest {
 
   @Size(max = 255)
   String name;
