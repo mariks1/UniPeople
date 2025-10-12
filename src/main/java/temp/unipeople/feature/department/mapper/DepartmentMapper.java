@@ -1,9 +1,9 @@
 package temp.unipeople.feature.department.mapper;
 
 import org.mapstruct.*;
-import temp.unipeople.feature.department.dto.CreateDepartmentRequest;
+import temp.unipeople.feature.department.dto.CreateDepartmentDto;
 import temp.unipeople.feature.department.dto.DepartmentDto;
-import temp.unipeople.feature.department.dto.UpdateDepartmentRequest;
+import temp.unipeople.feature.department.dto.UpdateDepartmentDto;
 import temp.unipeople.feature.department.entity.Department;
 
 @Mapper(componentModel = "spring")
@@ -23,7 +23,7 @@ public interface DepartmentMapper {
   @Mapping(target = "headEmployee", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
-  Department toEntity(CreateDepartmentRequest dto);
+  Department toEntity(CreateDepartmentDto dto);
 
   @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
   @Mapping(target = "id", ignore = true)
@@ -31,5 +31,5 @@ public interface DepartmentMapper {
   @Mapping(target = "headEmployee", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
-  void updateEntity(UpdateDepartmentRequest dto, @MappingTarget Department e);
+  void updateEntity(UpdateDepartmentDto dto, @MappingTarget Department e);
 }

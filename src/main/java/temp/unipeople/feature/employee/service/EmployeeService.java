@@ -14,9 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import temp.unipeople.feature.department.entity.Department;
 import temp.unipeople.feature.department.repository.DepartmentRepository;
-import temp.unipeople.feature.employee.dto.CreateEmployeeRequest;
+import temp.unipeople.feature.employee.dto.CreateEmployeeDto;
 import temp.unipeople.feature.employee.dto.EmployeeDto;
-import temp.unipeople.feature.employee.dto.UpdateEmployeeRequest;
+import temp.unipeople.feature.employee.dto.UpdateEmployeeDto;
 import temp.unipeople.feature.employee.entity.Employee;
 import temp.unipeople.feature.employee.mapper.EmployeeMapper;
 import temp.unipeople.feature.employee.repository.EmployeeRepository;
@@ -31,7 +31,7 @@ public class EmployeeService {
   private final EntityManager entityManager;
 
   @Transactional
-  public EmployeeDto create(CreateEmployeeRequest dto) {
+  public EmployeeDto create(CreateEmployeeDto dto) {
     Employee employee = mapper.toEntity(dto);
     if (dto.getDepartmentId() != null) {
       employee.setDepartment(entityManager.find(Department.class, dto.getDepartmentId()));
@@ -40,7 +40,7 @@ public class EmployeeService {
   }
 
   @Transactional
-  public EmployeeDto update(UUID id, UpdateEmployeeRequest dto) {
+  public EmployeeDto update(UUID id, UpdateEmployeeDto dto) {
     Employee employee =
         employeeRepository
             .findById(id)

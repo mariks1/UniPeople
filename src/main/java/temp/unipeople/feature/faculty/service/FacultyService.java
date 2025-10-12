@@ -6,9 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import temp.unipeople.feature.faculty.dto.CreateFacultyRequest;
+import temp.unipeople.feature.faculty.dto.CreateFacultyDto;
 import temp.unipeople.feature.faculty.dto.FacultyDto;
-import temp.unipeople.feature.faculty.dto.UpdateFacultyRequest;
+import temp.unipeople.feature.faculty.dto.UpdateFacultyDto;
 import temp.unipeople.feature.faculty.entity.Faculty;
 import temp.unipeople.feature.faculty.mapper.FacultyMapper;
 import temp.unipeople.feature.faculty.repository.FacultyRepository;
@@ -33,13 +33,13 @@ public class FacultyService {
   }
 
   @Transactional
-  public FacultyDto create(CreateFacultyRequest dto) {
+  public FacultyDto create(CreateFacultyDto dto) {
     Faculty faculty = mapper.toEntity(dto);
     return mapper.toDto(repo.save(faculty));
   }
 
   @Transactional
-  public FacultyDto update(UUID id, UpdateFacultyRequest dto) {
+  public FacultyDto update(UUID id, UpdateFacultyDto dto) {
     Faculty e =
         repo.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("faculty not found: " + id));

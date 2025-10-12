@@ -12,7 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import temp.unipeople.feature.department.entity.Department;
-import temp.unipeople.feature.duty.dto.AssignDutyRequest;
+import temp.unipeople.feature.duty.dto.AssignDutyDto;
 import temp.unipeople.feature.duty.dto.DutyAssignmentDto;
 import temp.unipeople.feature.duty.entity.DepartmentDutyAssignment;
 import temp.unipeople.feature.duty.entity.Duty;
@@ -34,7 +34,7 @@ public class DutyAssignmentService {
   private final EntityManager em;
 
   @Transactional
-  public DutyAssignmentDto assign(UUID departmentId, AssignDutyRequest req) {
+  public DutyAssignmentDto assign(UUID departmentId, AssignDutyDto req) {
     if (assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(
         departmentId, req.getEmployeeId(), req.getDutyId())) {
       throw new IllegalStateException("duty already assigned to employee in this department");

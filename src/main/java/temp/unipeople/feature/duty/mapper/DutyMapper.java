@@ -9,9 +9,9 @@ public interface DutyMapper {
   DutyDto toDto(Duty e);
 
   @Mapping(target = "id", ignore = true)
-  Duty toEntity(CreateDutyRequest dto);
+  Duty toEntity(CreateDutyDto dto);
 
   @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
   @Mapping(target = "id", ignore = true)
-  void updateEntity(UpdateDutyRequest dto, @MappingTarget Duty e);
+  void updateEntity(UpdateDutyDto dto, @MappingTarget Duty e);
 }

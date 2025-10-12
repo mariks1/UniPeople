@@ -9,9 +9,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import temp.unipeople.feature.employee.dto.CreateEmployeeRequest;
+import temp.unipeople.feature.employee.dto.CreateEmployeeDto;
 import temp.unipeople.feature.employee.dto.EmployeeDto;
-import temp.unipeople.feature.employee.dto.UpdateEmployeeRequest;
+import temp.unipeople.feature.employee.dto.UpdateEmployeeDto;
 import temp.unipeople.feature.employee.service.EmployeeService;
 
 @Slf4j
@@ -50,7 +50,7 @@ public class EmployeeController {
 
   /** Создание сотрудника. */
   @PostMapping
-  public ResponseEntity<EmployeeDto> create(@RequestBody CreateEmployeeRequest body) {
+  public ResponseEntity<EmployeeDto> create(@RequestBody CreateEmployeeDto body) {
     var created = employeeService.create(body);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
@@ -58,7 +58,7 @@ public class EmployeeController {
   /** Полное обновление (заменяет все изменяемые поля). */
   @PutMapping("/{id}")
   public ResponseEntity<EmployeeDto> update(
-      @PathVariable("id") UUID id, @RequestBody UpdateEmployeeRequest body) {
+      @PathVariable("id") UUID id, @RequestBody UpdateEmployeeDto body) {
     return ResponseEntity.ok(employeeService.update(id, body));
   }
 

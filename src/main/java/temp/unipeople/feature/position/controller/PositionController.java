@@ -1,52 +1,54 @@
 package temp.unipeople.feature.position.controller;
 
-import java.util.Map;
+import jakarta.validation.Valid;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import temp.unipeople.feature.position.dto.CreatePositionDto;
+import temp.unipeople.feature.position.dto.PositionDto;
+import temp.unipeople.feature.position.dto.UpdatePositionDto;
+import temp.unipeople.feature.position.service.PositionService;
 
 @RestController
 @RequestMapping("/api/v1/positions")
+@RequiredArgsConstructor
 public class PositionController {
 
-  // TODO: инжект сервиса
+  private final PositionService positionService;
 
   @GetMapping
-  public ResponseEntity<Page<Object>> findAll(Pageable pageable) {
+  public ResponseEntity<Page<PositionDto>> findAll(
+      @RequestParam(required = false) String q, Pageable pageable) {
+    Page<PositionDto> page = positionService.findAll(q, pageable);
     HttpHeaders headers = new HttpHeaders();
-    headers.add("X-Total-Count", "0");
-    return new ResponseEntity<>(Page.empty(pageable), headers, HttpStatus.NOT_IMPLEMENTED);
+    headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
+    return new ResponseEntity<>(page, headers, HttpStatus.OK);
   }
 
   /** CRUD */
   @GetMapping("/{id}")
-  public ResponseEntity<Object> get(@PathVariable UUID id) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<PositionDto> get(@PathVariable UUID id) {
+    return ResponseEntity.ok(positionService.get(id));
   }
 
   @PostMapping
-  public ResponseEntity<Object> create(@RequestBody Map<String, Object> body) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<PositionDto> create(@Valid @RequestBody CreatePositionDto body) {
+    PositionDto created = positionService.create(body);
+    return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @PutMapping("/{id}")
-  public ResponseEntity<Object> update(
-      @PathVariable UUID id, @RequestBody Map<String, Object> body) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<PositionDto> update(
+      @PathVariable UUID id, @Valid @RequestBody UpdatePositionDto body) {
+    return ResponseEntity.ok(positionService.update(id, body));
   }
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-  }
-
-  /** Сотрудники на этой должности (текущие), по employment */
-  @GetMapping("/{id}/employees")
-  public ResponseEntity<Page<Object>> listEmployees(@PathVariable UUID id, Pageable pageable) {
-    HttpHeaders headers = new HttpHeaders();
-    headers.add("X-Total-Count", "0");
-    return new ResponseEntity<>(Page.empty(pageable), headers, HttpStatus.NOT_IMPLEMENTED);
+    positionService.delete(id);
+    return ResponseEntity.noContent().build();
   }
 }

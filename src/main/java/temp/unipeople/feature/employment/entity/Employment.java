@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Getter
@@ -16,8 +17,12 @@ import org.springframework.data.annotation.LastModifiedDate;
 @AllArgsConstructor
 @Builder
 @Table(name = "employment")
+@EntityListeners(AuditingEntityListener.class)
 public class Employment {
-  @Id private UUID id;
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @Column(name = "employee_id", nullable = false)
   private UUID employeeId;
@@ -39,8 +44,14 @@ public class Employment {
 
   @Column private Integer salary;
 
+  public enum Status {
+    ACTIVE,
+    CLOSED
+  }
+
+  @Enumerated(EnumType.STRING)
   @Column(nullable = false)
-  private String status;
+  private Status status;
 
   @CreatedDate
   @Column(name = "created_at", updatable = false)

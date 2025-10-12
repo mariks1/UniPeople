@@ -1,10 +1,10 @@
 package temp.unipeople.feature.employment.dto;
 
+import java.time.LocalDate;
 import lombok.Data;
 
 @Data
-public class CloseEmploymentRequest {
+public class CloseEmploymentDto {
 
-    LocalDate endDate;
-
+  LocalDate endDate;
 }
