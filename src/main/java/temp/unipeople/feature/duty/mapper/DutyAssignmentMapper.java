@@ -8,9 +8,9 @@ import temp.unipeople.feature.duty.entity.DepartmentDutyAssignment;
 @Mapper(componentModel = "spring")
 public interface DutyAssignmentMapper {
 
-    @Mapping(source = "department.id", target = "departmentId")
-    @Mapping(source = "employee.id",   target = "employeeId")
-    @Mapping(source = "duty.id",       target = "dutyId")
-    @Mapping(source = "assignedBy.id", target = "assignedBy")
-    DutyAssignmentDto toDto(DepartmentDutyAssignment e);
+  @Mapping(source = "department.id", target = "departmentId")
+  @Mapping(source = "employee.id", target = "employeeId")
+  @Mapping(source = "duty.id", target = "dutyId")
+  @Mapping(source = "assignedBy.id", target = "assignedBy")
+  DutyAssignmentDto toDto(DepartmentDutyAssignment e);
 }

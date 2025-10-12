@@ -6,10 +6,17 @@ import java.util.UUID;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import temp.unipeople.feature.department.entity.Department;
+import temp.unipeople.feature.employee.entity.Employee;
 
 @Entity
 @Table(
     name = "department_duty_assignment",
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "uq_dept_emp_duty",
+          columnNames = {"department_id", "employee_id", "duty_id"})
+    },
     indexes = {
       @Index(name = "idx_duty_assign_dept", columnList = "department_id"),
       @Index(name = "idx_duty_assign_emp", columnList = "employee_id")
@@ -22,29 +29,30 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 public class DepartmentDutyAssignment {
 
-  @Id @Builder.Default private UUID id = UUID.randomUUID();
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
-  @Column(name = "department_id", nullable = false)
-  private UUID departmentId;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "department_id", foreignKey = @ForeignKey(name = "fk_duty_assign_department"))
+  private Department department;
 
-  @Column(name = "employee_id", nullable = false)
-  private UUID employeeId;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "employee_id", foreignKey = @ForeignKey(name = "fk_duty_assign_employee"))
+  private Employee employee;
 
-  @Column(name = "duty_id", nullable = false)
-  private UUID dutyId;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "duty_id", foreignKey = @ForeignKey(name = "fk_duty_assign_duty"))
+  private Duty duty;
 
-  @Column(name = "assigned_by")
-  private UUID assignedBy;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "assigned_by", foreignKey = @ForeignKey(name = "fk_duty_assign_by"))
+  private Employee assignedBy;
 
   @CreatedDate
-  @Column(name = "assigned_at", updatable = false)
+  @Column(name = "assigned_at", updatable = false, nullable = false)
   private Instant assignedAt;
 
   @Column(name = "note", length = 255)
   private String note;
-
-  @PrePersist
-  void prePersist() {
-    if (assignedAt == null) assignedAt = Instant.now();
-  }
 }
