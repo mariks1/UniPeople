@@ -1,23 +1,14 @@
-package temp.unipeople.feature.department.dto;
+package temp.unipeople.feature.position.dto;
 
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Data;
 
 @Data
-public class DepartmentDto {
+public class PositionDto {
 
   UUID id;
-
-  String code;
-
   String name;
-
-  UUID facultyId;
-
-  UUID headEmployeeId;
-
   Instant createdAt;
-
   Instant updatedAt;
 }
