@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class UpdateEmployeeDto {
+public class UpdateEmployeeRequest {
 
   @Size(max = 100)
   String firstName;

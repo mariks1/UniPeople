@@ -3,19 +3,32 @@ package temp.unipeople.feature.employee.controller;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import temp.unipeople.feature.employee.dto.CreateEmployeeRequest;
+import temp.unipeople.feature.employee.dto.EmployeeDto;
+import temp.unipeople.feature.employee.dto.UpdateEmployeeRequest;
+import temp.unipeople.feature.employee.service.EmployeeService;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/employees")
+@RequiredArgsConstructor
 public class EmployeeController {
+
+  private final EmployeeService employeeService;
 
   /** Пагинация с total */
   @GetMapping
-  public ResponseEntity<Page<Object>> findAll(Pageable pageable) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<Page<EmployeeDto>> findAll(Pageable pageable) {
+    Page<EmployeeDto> employees = employeeService.findAll(pageable);
+    HttpHeaders headers = new HttpHeaders();
+    headers.add("X-Total-Count", String.valueOf(employees.getTotalElements()));
+    return new ResponseEntity<>(employees, headers, HttpStatus.OK);
   }
 
   /**
@@ -25,50 +38,46 @@ public class EmployeeController {
   @GetMapping("/stream")
   public ResponseEntity<Map<String, Object>> stream(
       @RequestParam(required = false) Instant cursor, @RequestParam(defaultValue = "20") int size) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    Map<String, Object> body = employeeService.stream(cursor, size);
+    return ResponseEntity.ok(body);
   }
 
   /** Просмотр сотрудника по id. */
   @GetMapping("/{id}")
-  public ResponseEntity<Object> get(@PathVariable UUID id) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<EmployeeDto> get(@PathVariable("id") UUID id) {
+    return ResponseEntity.ok(employeeService.get(id));
   }
 
   /** Создание сотрудника. */
   @PostMapping
-  public ResponseEntity<Object> create(@RequestBody Object body /* EmployeeCreateRequestDTO */) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<EmployeeDto> create(@RequestBody CreateEmployeeRequest body) {
+    var created = employeeService.create(body);
+    return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   /** Полное обновление (заменяет все изменяемые поля). */
   @PutMapping("/{id}")
-  public ResponseEntity<Object> update(
-      @PathVariable UUID id, @RequestBody Object body /* EmployeeUpdateRequestDTO */) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<EmployeeDto> update(
+      @PathVariable("id") UUID id, @RequestBody UpdateEmployeeRequest body) {
+    return ResponseEntity.ok(employeeService.update(id, body));
   }
 
-  /** Частичное обновление (все поля опциональны). */
-  @PatchMapping("/{id}")
-  public ResponseEntity<Object> patch(
-      @PathVariable UUID id, @RequestBody Map<String, Object> patch /* EmployeePatchRequestDTO */) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
-  }
-
-  /** Удаление сотрудника (или пометить как FIRED — на ваш выбор в сервисе). */
+  /** Удаление сотрудника. */
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    employeeService.delete(id);
+    return ResponseEntity.noContent().build();
   }
 
   /** Доменная операция: уволить (status = FIRED). */
   @PostMapping("/{id}/fire")
-  public ResponseEntity<Object> fire(@PathVariable UUID id) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+  public ResponseEntity<EmployeeDto> fire(@PathVariable UUID id) {
+    return ResponseEntity.ok(employeeService.fire(id));
   }
 
   /** Доменная операция: активировать (status = ACTIVE). */
   @PostMapping("/{id}/activate")
   public ResponseEntity<Object> activate(@PathVariable UUID id) {
-    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    return ResponseEntity.ok(employeeService.activate(id));
   }
 }

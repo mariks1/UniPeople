@@ -10,7 +10,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class CreateEmployeeDto {
+public class CreateEmployeeRequest {
 
   @NotBlank
   @Size(max = 100)
