@@ -1,9 +1,9 @@
 package temp.unipeople.feature.employee.mapper;
 
 import org.mapstruct.*;
-import temp.unipeople.feature.employee.dto.CreateEmployeeRequest;
+import temp.unipeople.feature.employee.dto.CreateEmployeeDto;
 import temp.unipeople.feature.employee.dto.EmployeeDto;
-import temp.unipeople.feature.employee.dto.UpdateEmployeeRequest;
+import temp.unipeople.feature.employee.dto.UpdateEmployeeDto;
 import temp.unipeople.feature.employee.entity.Employee;
 
 @Mapper(componentModel = "spring")
@@ -20,7 +20,7 @@ public interface EmployeeMapper {
   @Mapping(target = "status", constant = "ACTIVE")
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
-  Employee toEntity(CreateEmployeeRequest dto);
+  Employee toEntity(CreateEmployeeDto dto);
 
   @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
   @Mapping(target = "id", ignore = true)
@@ -28,5 +28,5 @@ public interface EmployeeMapper {
   @Mapping(target = "department", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
-  void updateEntity(UpdateEmployeeRequest dto, @MappingTarget Employee e);
+  void updateEntity(UpdateEmployeeDto dto, @MappingTarget Employee e);
 }
