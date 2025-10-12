@@ -1,5 +1,10 @@
 package temp.unipeople.feature.department.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -18,12 +23,17 @@ import temp.unipeople.feature.department.service.DepartmentService;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/departments")
-@Tag(name = "Department", description = "TODO") // TODO
+@Tag(name = "Department", description = "Кафедры/департаменты (CRUD, назначение заведующего)")
 public class DepartmentController {
 
   private final DepartmentService service;
 
-  /** Пагинация + total в хедере */
+  @Operation(
+          summary = "Список департаментов (пагинация)",
+          description = "Возвращает страницу департаментов. Общее количество — в заголовке **X-Total-Count**.")
+  @ApiResponse(
+          responseCode = "200",
+          headers = @Header(name = "X-Total-Count", description = "Общее число записей", schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<DepartmentDto>> findAll(Pageable pageable) {
     Page<DepartmentDto> page = service.findAll(pageable);
@@ -32,34 +42,55 @@ public class DepartmentController {
     return new ResponseEntity<>(page, headers, HttpStatus.OK);
   }
 
-  /** Получить департамент по id */
+  @Operation(summary = "Получить департамент по id")
+  @ApiResponses({
+          @ApiResponse(responseCode = "200"),
+          @ApiResponse(responseCode = "404", description = "Не найден")
+  })
   @GetMapping("/{id}")
   public ResponseEntity<DepartmentDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(service.get(id));
   }
 
-  /** Создать департамент */
+  @Operation(summary = "Создать департамент")
+  @ApiResponses({
+          @ApiResponse(responseCode = "201"),
+          @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
+  })
   @PostMapping
   public ResponseEntity<DepartmentDto> create(@Valid @RequestBody CreateDepartmentDto body) {
     var created = service.create(body);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
-  /** Обновить департамент (имя, код, привязка к факультету) */
+  @Operation(summary = "Обновить департамент")
+  @ApiResponses({
+          @ApiResponse(responseCode = "200"),
+          @ApiResponse(responseCode = "404", description = "Не найден")
+  })
   @PutMapping("/{id}")
   public ResponseEntity<DepartmentDto> update(
       @PathVariable("id") UUID id, @RequestBody UpdateDepartmentDto body) {
     return ResponseEntity.ok(service.update(id, body));
   }
 
-  /** Удалить департамент */
+  @Operation(summary = "Удалить департамент")
+  @ApiResponses({
+          @ApiResponse(responseCode = "204"),
+          @ApiResponse(responseCode = "404", description = "Не найден"),
+          @ApiResponse(responseCode = "409", description = "Есть связанные данные")
+  })
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     service.delete(id);
     return ResponseEntity.noContent().build();
   }
 
-  /** Назначить/сменить заведующего кафедрой */
+  @Operation(summary = "Назначить/сменить заведующего кафедрой")
+  @ApiResponses({
+          @ApiResponse(responseCode = "200"),
+          @ApiResponse(responseCode = "404", description = "Департамент или сотрудник не найден")
+  })
   @PutMapping("/{id}/head/{employeeId}")
   public ResponseEntity<DepartmentDto> setHead(
       @PathVariable UUID id, @PathVariable UUID employeeId) {
@@ -67,7 +98,12 @@ public class DepartmentController {
     return ResponseEntity.ok(dto);
   }
 
-  /** Снять заведующего кафедрой */
+
+  @Operation(summary = "Снять заведующего кафедрой")
+  @ApiResponses({
+          @ApiResponse(responseCode = "204"),
+          @ApiResponse(responseCode = "404", description = "Департамент не найден")
+  })
   @DeleteMapping("/{id}/head")
   public ResponseEntity<Void> removeHead(@PathVariable UUID id) {
     service.removeHead(id);
@@ -75,7 +111,11 @@ public class DepartmentController {
   }
 
   // TODO
-  /** Список сотрудников кафедры (текущие) — пагинация + total */
+  @Operation(
+          summary = "Список сотрудников департамента (текущие)",
+          description = "Возвращает текущих сотрудников по активным назначениям Employment. Пагинация, X-Total-Count.")
+  @ApiResponse(responseCode = "200",
+          headers = @Header(name = "X-Total-Count", description = "Общее число записей", schema = @Schema(type = "integer")))
   @GetMapping("/{id}/employees")
   public ResponseEntity<Page<Object>> listEmployees(@PathVariable UUID id, Pageable pageable) {
     HttpHeaders headers = new HttpHeaders();
