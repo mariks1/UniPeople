@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.unit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -24,7 +24,7 @@ import temp.unipeople.feature.employee.dto.*;
 import temp.unipeople.feature.employee.service.EmployeeService;
 
 @WebMvcTest(EmployeeController.class)
-@Import(EmployeeControllerTest.MockConfig.class) // подключаем конфиг с бином-моком
+@Import(EmployeeControllerTest.MockConfig.class)
 class EmployeeControllerTest {
 
   @TestConfiguration
@@ -37,7 +37,7 @@ class EmployeeControllerTest {
 
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper om;
-  @Autowired EmployeeService service; // это наш мок из конфигурации
+  @Autowired EmployeeService service;
 
   @Test
   void findAll_returnsPage_andHeader() throws Exception {
@@ -72,7 +72,6 @@ class EmployeeControllerTest {
     when(service.get(id)).thenReturn(EmployeeDto.builder().build());
     mvc.perform(get("/api/v1/employees/{id}", id)).andExpect(status().isOk());
 
-    // <-- валидное тело для создания
     CreateEmployeeDto createBody =
         CreateEmployeeDto.builder()
             .firstName("A")

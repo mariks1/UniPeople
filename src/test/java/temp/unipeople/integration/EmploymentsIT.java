@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.integration;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -21,13 +21,11 @@ class EmploymentsIT extends BaseIntegrationTest {
 
   @Test
   void employment_create_list_close() throws Exception {
-    // prerequisites
     EmployeeDto emp = createEmployee("Kate", "Brown", "kate@uni.local", "+79990000031");
     FacultyDto fac = createFaculty("FAC-3", "Engineering");
     DepartmentDto dep = createDepartment("DEP-3", "Mechanics", fac.getId(), null);
     PositionDto pos = createPosition("Engineer");
 
-    // create employment
     Map<String, Object> body = new HashMap<>();
     body.put("employeeId", emp.getId());
     body.put("departmentId", dep.getId());
@@ -47,17 +45,14 @@ class EmploymentsIT extends BaseIntegrationTest {
     EmploymentDto dto =
         om.readValue(created.getResponse().getContentAsByteArray(), EmploymentDto.class);
 
-    // list by employee
     mvc.perform(get("/api/v1/employments/by-employee/{id}", emp.getId()))
         .andExpect(status().isOk())
         .andExpect(header().exists("X-Total-Count"));
 
-    // list by department (active default=true)
     mvc.perform(get("/api/v1/employments/by-department/{id}", dep.getId()))
         .andExpect(status().isOk())
         .andExpect(header().exists("X-Total-Count"));
 
-    // close
     mvc.perform(
             post("/api/v1/employments/{id}/close", dto.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -65,7 +60,6 @@ class EmploymentsIT extends BaseIntegrationTest {
         .andExpect(status().isOk());
   }
 
-  // helpers
   private EmployeeDto createEmployee(String first, String last, String email, String phone)
       throws Exception {
     Map<String, Object> b = new HashMap<>();

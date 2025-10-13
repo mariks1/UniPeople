@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.unit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -33,7 +33,6 @@ class EmploymentServiceTest {
     service = new EmploymentService(repo, mapper);
   }
 
-  // ---- get ----
   @Test
   void get_ok() {
     UUID id = UUID.randomUUID();
@@ -50,7 +49,6 @@ class EmploymentServiceTest {
     assertThrows(EntityNotFoundException.class, () -> service.get(UUID.randomUUID()));
   }
 
-  // ---- create ----
   @Test
   void create_throws_whenOverlapsFound() {
     var dto =
@@ -78,7 +76,7 @@ class EmploymentServiceTest {
             .startDate(LocalDate.of(2024, 1, 1))
             .build();
 
-    Employment entity = new Employment(); // rate = null → должен стать 1.00
+    Employment entity = new Employment();
     Employment saved = new Employment();
 
     when(repo.findOverlaps(any(), any(), any(), any(), isNull()))
@@ -94,7 +92,6 @@ class EmploymentServiceTest {
     verify(repo).save(entity);
   }
 
-  // ---- update ----
   @Test
   void update_ok() {
     UUID id = UUID.randomUUID();
@@ -122,12 +119,10 @@ class EmploymentServiceTest {
     UUID id = UUID.randomUUID();
     Employment e = new Employment();
     e.setStartDate(LocalDate.of(2024, 1, 10));
-    e.setEndDate(
-        LocalDate.of(2024, 1, 5)); // уже в сущности станет раньше старта после updateEntity
+    e.setEndDate(LocalDate.of(2024, 1, 5));
     when(repo.findById(id)).thenReturn(Optional.of(e));
     doAnswer(
             inv -> {
-              // имитируем, что маппер обновил endDate в прошлое
               Employment target = inv.getArgument(1);
               target.setEndDate(LocalDate.of(2024, 1, 5));
               return null;
@@ -142,7 +137,6 @@ class EmploymentServiceTest {
                 id, UpdateEmploymentDto.builder().endDate(LocalDate.of(2024, 1, 5)).build()));
   }
 
-  // ---- close ----
   @Test
   void close_returnsImmediately_whenAlreadyClosed() {
     UUID id = UUID.randomUUID();
@@ -194,7 +188,6 @@ class EmploymentServiceTest {
         () -> service.close(UUID.randomUUID(), CloseEmploymentDto.builder().build()));
   }
 
-  // ---- listing ----
   @Test
   void listByEmployee_sortsDescAndMaps() {
     UUID empId = UUID.randomUUID();

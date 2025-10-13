@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.unit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,10 +43,9 @@ class DutyServiceTest {
     service = new DutyService(dutyRepo, assignRepo, dutyMapper, assignMapper);
   }
 
-  // ---- findAll ----
   @Test
   void findAll_appliesDefaultSortWhenNone() {
-    Pageable in = PageRequest.of(0, 10); // без сортировки
+    Pageable in = PageRequest.of(0, 10);
     when(dutyRepo.findAll(any(Pageable.class))).thenReturn(Page.empty());
 
     service.findAll(in);
@@ -65,10 +64,9 @@ class DutyServiceTest {
 
     service.findAll(in);
 
-    verify(dutyRepo).findAll(in); // передан ровно тот же pageable
+    verify(dutyRepo).findAll(in);
   }
 
-  // ---- get ----
   @Test
   void get_ok() {
     UUID id = UUID.randomUUID();
@@ -86,7 +84,6 @@ class DutyServiceTest {
     assertThrows(EntityNotFoundException.class, () -> service.get(id));
   }
 
-  // ---- create ----
   @Test
   void create_wrapsDataIntegrityViolation() {
     var dto = CreateDutyDto.builder().code("X1").name("n").build();
@@ -97,9 +94,6 @@ class DutyServiceTest {
     assertThrows(IllegalStateException.class, () -> service.create(dto));
   }
 
-  // твои create_ok и create_throws_whenCodeExists остаются
-
-  // ---- update ----
   @Test
   void update_ok() {
     UUID id = UUID.randomUUID();
@@ -132,7 +126,6 @@ class DutyServiceTest {
         IllegalStateException.class, () -> service.update(id, UpdateDutyDto.builder().build()));
   }
 
-  // ---- delete ----
   @Test
   void delete_notFound() {
     when(dutyRepo.existsById(any())).thenReturn(false);
@@ -149,11 +142,9 @@ class DutyServiceTest {
     verify(dutyRepo).deleteById(id);
   }
 
-  // ---- listAssignments ----
-  @Test
   void listAssignments_appliesDefaultSortAndMaps() {
     UUID dutyId = UUID.randomUUID();
-    Pageable in = PageRequest.of(0, 5); // без сортировки
+    Pageable in = PageRequest.of(0, 5);
     var entity = DepartmentDutyAssignment.builder().build();
     var page = new org.springframework.data.domain.PageImpl<>(java.util.List.of(entity), in, 1);
 

@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -19,21 +19,17 @@ class DepartmentsIT extends BaseIntegrationTest {
 
   @Test
   void department_crud_and_head_flow_and_pagination() throws Exception {
-    // faculty + employee (будущий head)
     FacultyDto fac = createFaculty("FAC-1", "Physics");
     EmployeeDto head = createEmployee("Ivan", "Ivanov", "ivan@uni.local", "+79990000001");
 
-    // create department (без head)
     DepartmentDto dep = createDepartment("DEP-1", "Optics", fac.getId(), null);
     assertThat(dep.getId()).isNotNull();
     assertThat(dep.getFacultyId()).isEqualTo(fac.getId());
     assertThat(dep.getHeadEmployeeId()).isNull();
 
-    // GET by id
     DepartmentDto depRead = getDto("/api/v1/departments/{id}", DepartmentDto.class, dep.getId());
     assertThat(depRead.getId()).isEqualTo(dep.getId());
 
-    // set head
     MvcResult setHeadRes =
         mvc.perform(put("/api/v1/departments/{id}/head/{empId}", dep.getId(), head.getId()))
             .andExpect(status().isOk())
@@ -42,21 +38,17 @@ class DepartmentsIT extends BaseIntegrationTest {
         om.readValue(setHeadRes.getResponse().getContentAsByteArray(), DepartmentDto.class);
     assertThat(afterHead.getHeadEmployeeId()).isEqualTo(head.getId());
 
-    // remove head
     mvc.perform(delete("/api/v1/departments/{id}/head", dep.getId()))
         .andExpect(status().isNoContent());
 
-    // pagination header exists on /departments
     mvc.perform(get("/api/v1/departments"))
         .andExpect(status().isOk())
         .andExpect(header().exists("X-Total-Count"));
 
-    // NOT_IMPLEMENTED 501 на /{id}/employees (так и задумано в контроллере)
     mvc.perform(get("/api/v1/departments/{id}/employees", dep.getId()))
         .andExpect(status().isNotImplemented());
   }
 
-  // helpers
   private FacultyDto createFaculty(String code, String name) throws Exception {
     Map<String, Object> body = Map.of("code", code, "name", name);
     MvcResult res =

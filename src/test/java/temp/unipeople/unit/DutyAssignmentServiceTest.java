@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.unit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -32,9 +32,9 @@ import temp.unipeople.feature.employee.repository.EmployeeRepository;
 @ExtendWith(MockitoExtension.class)
 class DutyAssignmentServiceTest {
 
-  @Mock DutyRepository dutyRepository; // первый параметр конструктора (не используется в сервисе)
+  @Mock DutyRepository dutyRepository;
   @Mock EmployeeRepository employeeRepo;
-  @Mock DutyRepository dutyRepo; // второй DutyRepository из сервиса
+  @Mock DutyRepository dutyRepo;
   @Mock DutyAssignmentRepository assignmentRepo;
   @Mock DutyAssignmentMapper mapper;
   @Mock EntityManager em;
@@ -47,8 +47,6 @@ class DutyAssignmentServiceTest {
         new DutyAssignmentService(
             dutyRepository, employeeRepo, dutyRepo, assignmentRepo, mapper, em);
   }
-
-  // -------- assign()
 
   @Test
   void assign_throws_whenDuplicateExists() {
@@ -74,7 +72,6 @@ class DutyAssignmentServiceTest {
     when(assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(depId, empId, dutyId))
         .thenReturn(false);
 
-    // getReference для связей
     when(em.getReference(Department.class, depId)).thenReturn(new Department());
     when(em.getReference(Employee.class, empId)).thenReturn(new Employee());
     when(em.getReference(Duty.class, dutyId)).thenReturn(new Duty());
@@ -83,12 +80,7 @@ class DutyAssignmentServiceTest {
     when(assignmentRepo.saveAndFlush(any(DepartmentDutyAssignment.class))).thenReturn(saved);
     when(mapper.toDto(saved)).thenReturn(DutyAssignmentDto.builder().build());
 
-    var req =
-        AssignDutyDto.builder()
-            .employeeId(empId)
-            .dutyId(dutyId)
-            .note("note")
-            .build(); // assignedBy = null
+    var req = AssignDutyDto.builder().employeeId(empId).dutyId(dutyId).note("note").build();
 
     var dto = service.assign(depId, req);
 
@@ -117,12 +109,10 @@ class DutyAssignmentServiceTest {
     assertThrows(IllegalStateException.class, () -> service.assign(depId, req));
   }
 
-  // -------- list()
-
   @Test
   void list_appliesDefaultSortAndMaps() {
     UUID depId = UUID.randomUUID();
-    Pageable in = PageRequest.of(0, 5); // без сортировки
+    Pageable in = PageRequest.of(0, 5);
 
     DepartmentDutyAssignment entity = DepartmentDutyAssignment.builder().build();
     Page<DepartmentDutyAssignment> page = new PageImpl<>(List.of(entity), in, 1);
@@ -141,8 +131,6 @@ class DutyAssignmentServiceTest {
     assertEquals(Sort.Direction.DESC, order.getDirection());
   }
 
-  // -------- unassign()
-
   @Test
   void unassign_throws_whenNotFound() {
     UUID depId = UUID.randomUUID();
@@ -159,7 +147,6 @@ class DutyAssignmentServiceTest {
     UUID otherDeptId = UUID.randomUUID();
     UUID assignmentId = UUID.randomUUID();
 
-    // мок сущностей, чтобы задать id у департамента
     Department otherDep = mock(Department.class);
     when(otherDep.getId()).thenReturn(otherDeptId);
 

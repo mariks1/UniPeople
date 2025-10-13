@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.unit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -38,7 +38,6 @@ class DepartmentServiceTest {
     service = new DepartmentService(departmentRepository, employeeRepository, mapper, em);
   }
 
-  // ---- get ----
   @Test
   void get_ok() {
     UUID id = UUID.randomUUID();
@@ -55,7 +54,6 @@ class DepartmentServiceTest {
     assertThrows(EntityNotFoundException.class, () -> service.get(UUID.randomUUID()));
   }
 
-  // ---- create ----
   @Test
   void create_setsFacultyAndOptionalHead_thenSaves() {
     var dto =
@@ -92,11 +90,9 @@ class DepartmentServiceTest {
     when(mapper.toDto(entity)).thenReturn(DepartmentDto.builder().build());
 
     assertNotNull(service.create(dto));
-    // не дергаем getReference(Employee.class, ...)
     verify(em, never()).getReference(eq(Employee.class), any());
   }
 
-  // ---- update ----
   @Test
   void update_ok_updatesEntity_andSetsRefsWhenProvided() {
     UUID id = UUID.randomUUID();
@@ -140,7 +136,6 @@ class DepartmentServiceTest {
     verify(em, never()).getReference(eq(Employee.class), any());
   }
 
-  // ---- delete ----
   @Test
   void delete_notFound() {
     when(departmentRepository.findById(any())).thenReturn(Optional.empty());
@@ -159,7 +154,6 @@ class DepartmentServiceTest {
     verify(departmentRepository).delete(dep);
   }
 
-  // ---- setHead / removeHead ----
   @Test
   void setHead_ok() {
     UUID depId = UUID.randomUUID();
@@ -209,10 +203,9 @@ class DepartmentServiceTest {
     assertThrows(EntityNotFoundException.class, () -> service.removeHead(UUID.randomUUID()));
   }
 
-  // ---- findAll ----
   @Test
   void findAll_appliesDefaultSortWhenNone() {
-    Pageable in = PageRequest.of(0, 20); // без сортировки
+    Pageable in = PageRequest.of(0, 20);
     when(departmentRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
 
     service.findAll(in);

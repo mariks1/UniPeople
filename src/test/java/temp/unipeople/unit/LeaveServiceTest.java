@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.unit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -34,8 +34,6 @@ class LeaveServiceTest {
   void setUp() {
     service = new LeaveService(leaveTypeRepo, leaveReqRepo, mapper);
   }
-
-  // ---------- TYPES ----------
 
   @Test
   void listTypes_mapsPage() {
@@ -105,8 +103,6 @@ class LeaveServiceTest {
     assertThrows(EntityNotFoundException.class, () -> service.deleteType(UUID.randomUUID()));
   }
 
-  // ---------- REQUESTS: get ----------
-
   @Test
   void get_ok() {
     UUID id = UUID.randomUUID();
@@ -122,8 +118,6 @@ class LeaveServiceTest {
     when(leaveReqRepo.findById(any())).thenReturn(Optional.empty());
     assertThrows(EntityNotFoundException.class, () -> service.get(UUID.randomUUID()));
   }
-
-  // ---------- REQUESTS: create ----------
 
   @Test
   void create_throws_whenDateToBeforeDateFrom() {
@@ -156,15 +150,15 @@ class LeaveServiceTest {
 
   @Test
   void create_throws_whenYearlyLimitExceeded_onSubmit() {
-    var dto = baseCreateDto(true); // submit=true
+    var dto = baseCreateDto(true);
     LeaveType type = new LeaveType();
-    type.setMaxDaysPerYear(5); // лимит
+    type.setMaxDaysPerYear(5);
     when(leaveTypeRepo.findById(dto.getTypeId())).thenReturn(Optional.of(type));
     when(leaveReqRepo.findOverlaps(any(), any(), any())).thenReturn(Collections.emptyList());
     when(leaveTypeRepo.getReferenceById(dto.getTypeId())).thenReturn(type);
     when(leaveReqRepo.sumApprovedDaysForYear(
             dto.getEmployeeId(), dto.getTypeId(), dto.getDateFrom().getYear()))
-        .thenReturn(4); // уже одобрено 4, запросим ещё 3 дня => 7 > 5
+        .thenReturn(4);
 
     assertThrows(IllegalStateException.class, () -> service.create(dto));
   }
@@ -188,8 +182,6 @@ class LeaveServiceTest {
     assertNotNull(service.create(dto));
   }
 
-  // ---------- REQUESTS: update ----------
-
   @Test
   void update_notFound() {
     when(leaveReqRepo.findById(any())).thenReturn(Optional.empty());
@@ -202,7 +194,7 @@ class LeaveServiceTest {
   void update_throws_whenStatusNotDraftOrPending() {
     UUID id = UUID.randomUUID();
     LeaveRequest e = new LeaveRequest();
-    e.setStatus(LeaveRequest.Status.APPROVED); // запрещено
+    e.setStatus(LeaveRequest.Status.APPROVED);
     when(leaveReqRepo.findById(id)).thenReturn(Optional.of(e));
     assertThrows(
         IllegalStateException.class,
@@ -216,7 +208,6 @@ class LeaveServiceTest {
     e.setStatus(LeaveRequest.Status.DRAFT);
     e.setDateFrom(LocalDate.of(2025, 1, 10));
     when(leaveReqRepo.findById(id)).thenReturn(Optional.of(e));
-    // имитируем, что маппер поставил dateTo раньше
     doAnswer(
             inv -> {
               LeaveRequest target = inv.getArgument(1);
@@ -243,7 +234,6 @@ class LeaveServiceTest {
     self.setDateFrom(LocalDate.of(2025, 1, 1));
     self.setDateTo(LocalDate.of(2025, 1, 3));
     when(leaveReqRepo.findById(id)).thenReturn(Optional.of(self));
-    // после update пусть даты останутся те же
     doAnswer(inv -> null).when(mapper).updateEntity(any(UpdateLeaveRequestDto.class), eq(self));
 
     LeaveRequest other = new LeaveRequest();
@@ -269,8 +259,6 @@ class LeaveServiceTest {
 
     assertNotNull(service.update(id, UpdateLeaveRequestDto.builder().build()));
   }
-
-  // ---------- approve / reject / cancel ----------
 
   @Test
   void approve_notFound() {
@@ -388,7 +376,6 @@ class LeaveServiceTest {
     assertThrows(IllegalStateException.class, () -> service.cancel(id));
   }
 
-  // ---------- lists ----------
   @Test
   void listByEmployee_maps() {
     UUID empId = UUID.randomUUID();
@@ -414,7 +401,6 @@ class LeaveServiceTest {
     assertEquals(1, res.getTotalElements());
   }
 
-  // helpers
   private CreateLeaveRequestDto baseCreateDto() {
     return baseCreateDto(false);
   }

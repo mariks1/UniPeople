@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.integration;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -17,13 +17,10 @@ class FacultyIT extends BaseIntegrationTest {
 
   @Test
   void faculty_create_get_update_and_conflict() throws Exception {
-    // create
     FacultyDto created = createFaculty("FAC-100", "Math");
 
-    // get by id
     mvc.perform(get("/api/v1/faculties/{id}", created.getId())).andExpect(status().isOk());
 
-    // update
     Map<String, Object> upd = new HashMap<>();
     upd.put("name", "Mathematics");
     mvc.perform(
@@ -32,7 +29,6 @@ class FacultyIT extends BaseIntegrationTest {
                 .content(om.writeValueAsBytes(upd)))
         .andExpect(status().isOk());
 
-    // conflict on duplicate code
     createFaculty("FAC-200", "Physics");
     Map<String, Object> dup = new HashMap<>();
     dup.put("code", "FAC-200");
@@ -43,7 +39,6 @@ class FacultyIT extends BaseIntegrationTest {
                 .content(om.writeValueAsBytes(dup)))
         .andExpect(status().isConflict());
 
-    // 404 on unknown id for GET (проверяем Error path контроллера)
     mvc.perform(get("/api/v1/faculties/{id}", UUID.randomUUID())).andExpect(status().isNotFound());
   }
 

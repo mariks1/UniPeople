@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -16,21 +16,17 @@ class PositionsIT extends BaseIntegrationTest {
 
   @Test
   void position_crud_and_search() throws Exception {
-    // create
     PositionDto p1 = createPosition("Developer");
     PositionDto p2 = createPosition("DevOps");
     assertThat(p1.getId()).isNotNull();
     assertThat(p2.getId()).isNotNull();
 
-    // get
     mvc.perform(get("/api/v1/positions/{id}", p1.getId())).andExpect(status().isOk());
 
-    // list (q + X-Total-Count)
     mvc.perform(get("/api/v1/positions").param("q", "dev"))
         .andExpect(status().isOk())
         .andExpect(header().exists("X-Total-Count"));
 
-    // update
     Map<String, Object> upd = Map.of("name", "Senior Developer");
     MvcResult updated =
         mvc.perform(
@@ -43,9 +39,7 @@ class PositionsIT extends BaseIntegrationTest {
         om.readValue(updated.getResponse().getContentAsByteArray(), PositionDto.class);
     assertThat(after.getName()).isEqualTo("Senior Developer");
 
-    // delete
     mvc.perform(delete("/api/v1/positions/{id}", p2.getId())).andExpect(status().isNoContent());
-    // get deleted -> 404
     mvc.perform(get("/api/v1/positions/{id}", p2.getId())).andExpect(status().isNotFound());
   }
 

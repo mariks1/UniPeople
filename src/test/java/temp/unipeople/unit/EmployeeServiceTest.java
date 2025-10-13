@@ -1,4 +1,4 @@
-package temp.unipeople;
+package temp.unipeople.unit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -103,7 +103,7 @@ class EmployeeServiceTest {
     fired.setStatus(Employee.Status.FIRED);
     when(employeeRepo.findById(id)).thenReturn(Optional.of(fired));
     when(mapper.toDto(fired)).thenReturn(EmployeeDto.builder().build());
-    assertNotNull(service.fire(id)); // уже FIRED
+    assertNotNull(service.fire(id));
 
     Employee active = new Employee();
     active.setStatus(Employee.Status.ACTIVE);
@@ -125,7 +125,6 @@ class EmployeeServiceTest {
     doThrow(new DataIntegrityViolationException("ref")).when(employeeRepo).deleteById(id);
     assertThrows(IllegalStateException.class, () -> service.delete(id));
 
-    // успешный кейс
     doNothing().when(employeeRepo).deleteById(id);
     assertDoesNotThrow(() -> service.delete(id));
   }
@@ -148,21 +147,19 @@ class EmployeeServiceTest {
 
   @Test
   void stream_handlesCursorAndSizeBounds() {
-    // no cursor
     Slice<Employee> s1 = new SliceImpl<>(List.of(new Employee()));
     when(employeeRepo.findAllByOrderByCreatedAtDesc(any())).thenReturn(s1);
     when(mapper.toDto(any(Employee.class)))
         .thenAnswer(inv -> EmployeeDto.builder().createdAt(Instant.now()).build());
 
-    var res1 = service.stream(null, -5); // size < 1 → 1
-    assertTrue((boolean) res1.get("hasNext") == s1.hasNext());
+    var res1 = service.stream(null, -5);
+    assertEquals((boolean) res1.get("hasNext"), s1.hasNext());
     assertTrue(res1.containsKey("nextCursor"));
 
-    // with cursor
     Slice<Employee> s2 = new SliceImpl<>(Collections.emptyList());
     when(employeeRepo.findByCreatedAtLessThanOrderByCreatedAtDesc(any(), any())).thenReturn(s2);
 
-    var res2 = service.stream(Instant.now(), 5000); // >200 → 200
+    var res2 = service.stream(Instant.now(), 5000);
     assertEquals(false, res2.get("hasNext"));
     assertNull(res2.get("nextCursor"));
   }
