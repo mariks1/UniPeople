@@ -5,7 +5,6 @@ import jakarta.persistence.EntityNotFoundException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import temp.unipeople.feature.employee.entity.Employee;
 import temp.unipeople.feature.employee.repository.EmployeeRepository;
 
@@ -15,13 +14,11 @@ public class EmployeeReader {
   private final EmployeeRepository repo;
   private final EntityManager em;
 
-  @Transactional(readOnly = true)
   public Employee require(UUID id) {
     return repo.findById(id)
         .orElseThrow(() -> new EntityNotFoundException("employee not found: " + id));
   }
 
-  @Transactional(readOnly = true)
   public Employee getRef(UUID id) {
     return em.getReference(Employee.class, id);
   }

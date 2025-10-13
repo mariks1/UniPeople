@@ -30,7 +30,6 @@ public class DutyService {
   private final DutyMapper dutyMapper;
   private final DutyAssignmentMapper dutyAssignmentMapper;
 
-  @Transactional(readOnly = true)
   public Page<DutyDto> findAll(Pageable pageable) {
     Pageable sorted =
         pageable.getSort().isSorted()
@@ -42,7 +41,6 @@ public class DutyService {
     return dutyRepository.findAll(sorted).map(dutyMapper::toDto);
   }
 
-  @Transactional(readOnly = true)
   public DutyDto get(UUID id) {
     Duty e =
         dutyRepository
@@ -88,7 +86,6 @@ public class DutyService {
     dutyRepository.deleteById(id);
   }
 
-  @Transactional(readOnly = true)
   public Page<DutyAssignmentDto> listAssignments(UUID dutyId, Pageable pageable) {
     Pageable sorted =
         pageable.getSort().isSorted()

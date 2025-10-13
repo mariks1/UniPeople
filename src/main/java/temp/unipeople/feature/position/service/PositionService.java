@@ -24,7 +24,6 @@ public class PositionService {
   private final PositionRepository positionRepository;
   private final PositionMapper positionMapper;
 
-  @Transactional(readOnly = true)
   public Page<PositionDto> findAll(String q, Pageable pageable) {
     Pageable sorted =
         pageable.getSort().isSorted()
@@ -40,7 +39,6 @@ public class PositionService {
     return page.map(positionMapper::toDto);
   }
 
-  @Transactional(readOnly = true)
   public PositionDto get(UUID id) {
     return positionRepository
         .findById(id)
