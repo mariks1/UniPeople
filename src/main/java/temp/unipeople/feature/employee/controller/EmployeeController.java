@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -90,7 +92,7 @@ public class EmployeeController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
-  public ResponseEntity<EmployeeDto> create(@RequestBody CreateEmployeeDto body) {
+  public ResponseEntity<EmployeeDto> create(@Valid @RequestBody CreateEmployeeDto body) {
     var created = employeeService.create(body);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
@@ -99,7 +101,7 @@ public class EmployeeController {
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
   public ResponseEntity<EmployeeDto> update(
-      @PathVariable("id") UUID id, @RequestBody UpdateEmployeeDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody UpdateEmployeeDto body) {
     return ResponseEntity.ok(employeeService.update(id, body));
   }
 

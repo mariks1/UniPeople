@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,7 +46,7 @@ public class EmploymentController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности/целостности")
   })
   @PostMapping
-  public ResponseEntity<EmploymentDto> create(@RequestBody CreateEmploymentDto body) {
+  public ResponseEntity<EmploymentDto> create(@Valid @RequestBody CreateEmploymentDto body) {
     EmploymentDto dto = employmentService.create(body);
     return ResponseEntity.status(HttpStatus.CREATED).body(dto);
   }
@@ -53,7 +55,7 @@ public class EmploymentController {
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
   public ResponseEntity<EmploymentDto> update(
-      @PathVariable("id") UUID id, @RequestBody UpdateEmploymentDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody UpdateEmploymentDto body) {
     return ResponseEntity.ok(employmentService.update(id, body));
   }
 
@@ -61,7 +63,7 @@ public class EmploymentController {
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/close")
   public ResponseEntity<EmploymentDto> close(
-      @PathVariable("id") UUID id, @RequestBody(required = false) CloseEmploymentDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody(required = false) CloseEmploymentDto body) {
     return ResponseEntity.ok(employmentService.close(id, body));
   }
 

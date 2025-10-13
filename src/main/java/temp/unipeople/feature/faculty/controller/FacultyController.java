@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -36,7 +38,7 @@ public class FacultyController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
-  public ResponseEntity<FacultyDto> create(@RequestBody CreateFacultyDto dto) {
+  public ResponseEntity<FacultyDto> create(@Valid @RequestBody CreateFacultyDto dto) {
     var saved = service.create(dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(saved);
   }
@@ -45,7 +47,7 @@ public class FacultyController {
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
   public ResponseEntity<FacultyDto> update(
-      @PathVariable("id") UUID id, @RequestBody UpdateFacultyDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody UpdateFacultyDto body) {
     return ResponseEntity.ok(service.update(id, body));
   }
 }

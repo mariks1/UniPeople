@@ -118,7 +118,7 @@ public class EmployeeService {
 
   @Transactional(readOnly = true)
   public Map<String, Object> stream(Instant cursor, int size) {
-    int limit = Math.max(1, Math.min(size, 200));
+    int limit = Math.max(1, Math.min(size, 50));
     Pageable pageReq = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
 
     Slice<Employee> slice =
