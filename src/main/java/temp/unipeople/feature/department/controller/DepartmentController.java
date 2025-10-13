@@ -114,7 +114,6 @@ public class DepartmentController {
     return ResponseEntity.noContent().build();
   }
 
-  // TODO
   @Operation(
       summary = "Список сотрудников департамента (текущие)",
       description =

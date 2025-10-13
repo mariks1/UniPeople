@@ -20,11 +20,17 @@ public class FacultyService {
   private final FacultyRepository repo;
   private final FacultyMapper mapper;
 
-  public Page<Faculty> page(Pageable pageable) {
-    return Page.empty(pageable);
-  } // TODO impl
+  public Page<FacultyDto> page(Pageable pageable) {
+    Pageable sorted =
+        pageable.getSort().isSorted()
+            ? pageable
+            : PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("code"), Sort.Order.asc("name")));
+    return repo.findAll(sorted).map(mapper::toDto);
+  }
 
-  @Transactional(readOnly = true)
   public FacultyDto get(UUID id) {
     Faculty d =
         repo.findById(id)

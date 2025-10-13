@@ -59,7 +59,6 @@ public class DutyAssignmentService {
     return mapper.toDto(a);
   }
 
-  @Transactional(readOnly = true)
   public Page<DutyAssignmentDto> list(UUID departmentId, Pageable pageable) {
     Pageable sorted =
         pageable.getSort().isSorted()

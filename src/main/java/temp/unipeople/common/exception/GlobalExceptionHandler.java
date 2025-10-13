@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.data.util.TypeInformation;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.transaction.TransactionSystemException;
@@ -24,6 +26,35 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  @ExceptionHandler(IllegalStateException.class)
+  @ResponseStatus(HttpStatus.CONFLICT)
+  public Map<String, Object> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
+    String msg = Optional.ofNullable(ex.getMessage()).orElse("Illegal state");
+    log.debug("Illegal state at {}: {}", req.getRequestURI(), msg);
+    return body(HttpStatus.CONFLICT, "IllegalState", msg, req, null);
+  }
+
+  @ExceptionHandler(PropertyReferenceException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public Map<String, Object> handlePropertyReference(
+      PropertyReferenceException ex, HttpServletRequest req) {
+
+    TypeInformation<?> ti = ex.getType();
+    ti.getType();
+    String entity = ti.getType().getSimpleName();
+    String prop = Optional.of(ex.getPropertyName()).orElse("unknown");
+
+    String msg = "Unknown property '%s' for '%s'".formatted(prop, entity);
+
+    Map<String, Object> details = new LinkedHashMap<>();
+    details.put("entity", entity);
+    details.put("property", prop);
+    details.put("reason", Optional.of(ex.getMessage()).orElse(""));
+
+    log.debug("Property reference error at {}: {} -> {}", req.getRequestURI(), msg, details);
+    return body(HttpStatus.BAD_REQUEST, "BadProperty", msg, req, details);
+  }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)

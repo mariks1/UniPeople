@@ -29,7 +29,6 @@ public class DepartmentService {
   private final EntityManager em;
   private final EmployeeReader employeeReader;
 
-  @Transactional(readOnly = true)
   public DepartmentDto get(UUID id) {
     Department d =
         departmentRepository
@@ -102,7 +101,6 @@ public class DepartmentService {
     dep.setHeadEmployee(null);
   }
 
-  @Transactional(readOnly = true)
   public Page<DepartmentDto> findAll(Pageable pageable) {
     Pageable sorted =
         pageable.getSort().isSorted()

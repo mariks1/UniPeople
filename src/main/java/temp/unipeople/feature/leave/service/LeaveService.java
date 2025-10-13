@@ -28,7 +28,6 @@ public class LeaveService {
   private final LeaveRequestRepository leaveRequestRepository;
   private final LeaveMapper leaveMapper;
 
-  @Transactional(readOnly = true)
   public Page<LeaveTypeDto> listTypes(Pageable p) {
     return leaveTypeRepository.findAll(p).map(leaveMapper::toDto);
   }
@@ -58,8 +57,6 @@ public class LeaveService {
     leaveTypeRepository.deleteById(id);
   }
 
-  // ==== Requests ====
-  @Transactional(readOnly = true)
   public LeaveRequestDto get(UUID id) {
     return leaveRequestRepository
         .findById(id)
@@ -72,17 +69,14 @@ public class LeaveService {
     // базовые проверки
     if (dto.getDateTo().isBefore(dto.getDateFrom()))
       throw new IllegalArgumentException("dateTo < dateFrom");
-    // проверь существование типа (и сотрудника, если хочешь дружелюбно)
     leaveTypeRepository
         .findById(dto.getTypeId())
         .orElseThrow(() -> new EntityNotFoundException("type not found"));
 
-    // запрет пересечений с уже одобренными/в работе
     if (!leaveRequestRepository
         .findOverlaps(dto.getEmployeeId(), dto.getDateFrom(), dto.getDateTo())
         .isEmpty()) throw new IllegalStateException("overlapping leave exists");
 
-    // лимит по типу (если задан)
     var type = leaveTypeRepository.getReferenceById(dto.getTypeId());
     if (type.getMaxDaysPerYear() != null && dto.isSubmit()) {
       int year = dto.getDateFrom().getYear();
@@ -182,13 +176,10 @@ public class LeaveService {
     throw new IllegalStateException("only PENDING/APPROVED can be canceled");
   }
 
-  // Списки
-  @Transactional(readOnly = true)
   public Page<LeaveRequestDto> listByEmployee(UUID empId, Pageable p) {
     return leaveRequestRepository.findByEmployeeId(empId, p).map(leaveMapper::toDto);
   }
 
-  @Transactional(readOnly = true)
   public Page<LeaveRequestDto> listByStatus(LeaveRequest.Status status, Pageable p) {
     return leaveRequestRepository.findByStatus(status, p).map(leaveMapper::toDto);
   }

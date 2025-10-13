@@ -23,7 +23,6 @@ public class EmploymentService {
   private final EmploymentRepository repo;
   private final EmploymentMapper mapper;
 
-  @Transactional(readOnly = true)
   public EmploymentDto get(UUID id) {
     var e =
         repo.findById(id)
@@ -82,13 +81,11 @@ public class EmploymentService {
     return mapper.toDto(e);
   }
 
-  @Transactional(readOnly = true)
   public Page<EmploymentDto> listByEmployee(UUID employeeId, Pageable pageable) {
     var page = repo.findByEmployeeIdOrderByStartDateDesc(employeeId, pageable);
     return page.map(mapper::toDto);
   }
 
-  @Transactional(readOnly = true)
   public Page<EmploymentDto> listByDepartment(
       UUID departmentId, boolean active, Pageable pageable) {
     Page<Employment> page =

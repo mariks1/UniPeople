@@ -15,7 +15,6 @@ public class DepartmentReader {
   private final DepartmentRepository repo;
   private final EntityManager em;
 
-  @Transactional(readOnly = true)
   public Department require(UUID id) {
     return repo.findById(id)
         .orElseThrow(() -> new EntityNotFoundException("department not found: " + id));
@@ -26,7 +25,6 @@ public class DepartmentReader {
     repo.clearHeadByEmployeeId(headEmployeeId);
   }
 
-  @Transactional(readOnly = true)
   public Department getRef(UUID id) {
     return em.getReference(Department.class, id);
   }

@@ -68,7 +68,6 @@ public class EmployeeService {
     return mapper.toDto(employee);
   }
 
-  @Transactional(readOnly = true)
   public EmployeeDto get(UUID id) {
     Employee d =
         employeeRepository
@@ -107,7 +106,6 @@ public class EmployeeService {
     }
   }
 
-  @Transactional(readOnly = true)
   public Page<EmployeeDto> findAll(Pageable pageable) {
     Pageable sorted =
         pageable.getSort().isSorted()
@@ -116,7 +114,6 @@ public class EmployeeService {
     return employeeRepository.findAll(sorted).map(mapper::toDto);
   }
 
-  @Transactional(readOnly = true)
   public Map<String, Object> stream(Instant cursor, int size) {
     int limit = Math.max(1, Math.min(size, 50));
     Pageable pageReq = PageRequest.of(0, limit, DEFAULT_SORT);

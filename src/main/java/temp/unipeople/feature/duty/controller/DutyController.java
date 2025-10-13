@@ -13,10 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import temp.unipeople.feature.duty.dto.CreateDutyDto;
-import temp.unipeople.feature.duty.dto.DutyAssignmentDto;
-import temp.unipeople.feature.duty.dto.DutyDto;
-import temp.unipeople.feature.duty.dto.UpdateDutyDto;
+import temp.unipeople.feature.duty.dto.*;
 import temp.unipeople.feature.duty.service.DutyAssignmentService;
 import temp.unipeople.feature.duty.service.DutyService;
 
@@ -111,12 +108,74 @@ public class DutyController {
     return new ResponseEntity<>(page, headers, HttpStatus.OK);
   }
 
-  // TODO
-  /** Список назначений обязанностей в департаменте (пагинация + total) */
+  @Operation(
+      summary = "Список назначений обязанностей в департаменте (пагинация)",
+      description = "X-Total-Count — общее количество записей")
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее число записей",
+              schema = @Schema(type = "integer")))
+  @GetMapping("/departments/{id}/assignments")
+  public ResponseEntity<Page<DutyAssignmentDto>> listDutyAssignmentsByDepartment(
+      @PathVariable("id") UUID departmentId, Pageable pageable) {
+
+    Page<DutyAssignmentDto> page = assignmentService.list(departmentId, pageable);
+    HttpHeaders headers = new HttpHeaders();
+    headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
+    return new ResponseEntity<>(page, headers, HttpStatus.OK);
+  }
+
+  @Operation(
+      summary = "Назначить обязанность сотруднику в департаменте",
+      description = "Создаёт запись назначения duty → employee внутри департамента")
+  @ApiResponses({
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "400", description = "Валидaция/некорректные данные"),
+    @ApiResponse(responseCode = "404", description = "Не найден department/employee/duty"),
+    @ApiResponse(responseCode = "409", description = "Уже назначено (уникальный ключ)"),
+  })
+  @PostMapping("/departments/{departmentId}/assignments")
+  public ResponseEntity<DutyAssignmentDto> assignDutyToEmployee(
+      @PathVariable("departmentId") UUID departmentId, @Valid @RequestBody AssignDutyDto req) {
+
+    DutyAssignmentDto created = assignmentService.assign(departmentId, req);
+    return ResponseEntity.status(HttpStatus.CREATED).body(created);
+  }
+
+  @Operation(summary = "Снять назначение по ID для департамента")
+  @ApiResponses({
+    @ApiResponse(responseCode = "204"),
+    @ApiResponse(
+        responseCode = "404",
+        description = "Назначение не найдено или не в этом департаменте"),
+  })
+  @DeleteMapping("/departments/{departmentId}/assignments/{assignmentId}")
+  public ResponseEntity<Void> unassignDuty(
+      @PathVariable("departmentId") UUID departmentId,
+      @PathVariable("assignmentId") UUID assignmentId) {
+
+    assignmentService.unassign(departmentId, assignmentId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @Operation(
+      summary = "Список назначений обязанностей в департаменте (пагинация)",
+      description = "X-Total-Count — общее количество записей")
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее число записей",
+              schema = @Schema(type = "integer")))
   @GetMapping("/{id}/duties/assignments")
-  public ResponseEntity<Page<DutyAssignmentDto>> listDutyAssignments(
-      @PathVariable("id") UUID id, Pageable pageable) {
-    Page<DutyAssignmentDto> page = assignmentService.list(id, pageable);
+  public ResponseEntity<Page<DutyAssignmentDto>> listDutyAssignmentsLegacy(
+      @PathVariable("id") UUID departmentId, Pageable pageable) {
+
+    Page<DutyAssignmentDto> page = assignmentService.list(departmentId, pageable);
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
     return new ResponseEntity<>(page, headers, HttpStatus.OK);
