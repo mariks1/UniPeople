@@ -1,5 +1,7 @@
 package temp.unipeople.feature.position.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Builder;
@@ -13,6 +15,12 @@ public class PositionDto {
 
   UUID id;
   String name;
+
+  @JsonAlias("created_at")
+  @JsonProperty("created_at")
   Instant createdAt;
+
+  @JsonAlias("updated_at")
+  @JsonProperty("updated_at")
   Instant updatedAt;
 }

@@ -37,7 +37,7 @@ class DepartmentFlowIT extends BaseIntegrationTest {
     assertThat(depRead.getFacultyId()).isEqualTo(fac1.getId());
     assertThat(depRead.getHeadEmployeeId()).isEqualTo(emp1.getId());
 
-    Map<String, Object> updateEmp2 = Map.of("departmentId", dep.getId());
+    Map<String, Object> updateEmp2 = Map.of("department_id", dep.getId());
     MvcResult putEmp2 =
         mvc.perform(
                 put("/api/v1/employees/{id}", emp2.getId())
@@ -58,10 +58,10 @@ class DepartmentFlowIT extends BaseIntegrationTest {
   private EmployeeDto createEmployee(String first, String last, String email, String phone)
       throws Exception {
     Map<String, Object> body = new HashMap<>();
-    body.put("firstName", first);
-    body.put("lastName", last);
-    body.put("middleName", null);
-    body.put("workEmail", email);
+    body.put("first_name", first);
+    body.put("last_name", last);
+    body.put("middle_name", null);
+    body.put("work_email", email);
     body.put("phone", phone);
 
     MvcResult res =
@@ -96,8 +96,8 @@ class DepartmentFlowIT extends BaseIntegrationTest {
     Map<String, Object> body = new HashMap<>();
     body.put("code", code);
     body.put("name", name);
-    body.put("facultyId", facultyId);
-    body.put("headEmployeeId", headEmployeeId);
+    body.put("faculty_id", facultyId);
+    body.put("head_employee_id", headEmployeeId);
 
     MvcResult res =
         mvc.perform(

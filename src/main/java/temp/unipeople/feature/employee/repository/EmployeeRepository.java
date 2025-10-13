@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import temp.unipeople.feature.employee.entity.Employee;
 
 public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
-  Slice<Employee> findByCreatedAtLessThanOrderByCreatedAtDesc(Instant cursor, Pageable pageable);
+  Slice<Employee> findByCreatedAtLessThan(Instant cursor, Pageable pageable);
 
-  Slice<Employee> findAllByOrderByCreatedAtDesc(Pageable pageable);
+  Slice<Employee> findAllBy(Pageable pageable);
 }

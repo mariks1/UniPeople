@@ -1,5 +1,7 @@
 package temp.unipeople.feature.employment.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,13 +15,25 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class CreateEmploymentDto {
 
-  @NotNull UUID employeeId;
+  @NotNull
+  @JsonProperty("employee_id")
+  @JsonAlias("employee_id")
+  UUID employeeId;
 
-  @NotNull UUID departmentId;
+  @NotNull
+  @JsonProperty("department_id")
+  @JsonAlias("department_id")
+  UUID departmentId;
 
-  @NotNull UUID positionId;
+  @NotNull
+  @JsonProperty("position_id")
+  @JsonAlias("position_id")
+  UUID positionId;
 
-  @NotNull LocalDate startDate;
+  @NotNull
+  @JsonProperty("start_date")
+  @JsonAlias("start_date")
+  LocalDate startDate;
 
   @DecimalMin(value = "0.01")
   @DecimalMax(value = "2.00")

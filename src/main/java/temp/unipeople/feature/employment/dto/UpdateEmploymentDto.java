@@ -1,5 +1,7 @@
 package temp.unipeople.feature.employment.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -20,5 +22,7 @@ public class UpdateEmploymentDto {
 
   @PositiveOrZero Integer salary;
 
+  @JsonAlias("end_date")
+  @JsonProperty("end_date")
   LocalDate endDate;
 }

@@ -64,10 +64,10 @@ class DepartmentsIT extends BaseIntegrationTest {
   private EmployeeDto createEmployee(String first, String last, String email, String phone)
       throws Exception {
     Map<String, Object> body = new HashMap<>();
-    body.put("firstName", first);
-    body.put("lastName", last);
-    body.put("middleName", null);
-    body.put("workEmail", email);
+    body.put("first_name", first);
+    body.put("last_name", last);
+    body.put("middle_name", null);
+    body.put("work_email", email);
     body.put("phone", phone);
     MvcResult res =
         mvc.perform(
@@ -84,8 +84,8 @@ class DepartmentsIT extends BaseIntegrationTest {
     Map<String, Object> body = new HashMap<>();
     body.put("code", code);
     body.put("name", name);
-    body.put("facultyId", facId);
-    body.put("headEmployeeId", headId);
+    body.put("faculty_id", facId);
+    body.put("head_employee_id", headId);
     MvcResult res =
         mvc.perform(
                 post("/api/v1/departments")

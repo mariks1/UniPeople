@@ -27,11 +27,11 @@ class EmploymentsIT extends BaseIntegrationTest {
     PositionDto pos = createPosition("Engineer");
 
     Map<String, Object> body = new HashMap<>();
-    body.put("employeeId", emp.getId());
-    body.put("departmentId", dep.getId());
-    body.put("positionId", pos.getId());
-    body.put("startDate", LocalDate.now().toString());
-    body.put("endDate", null);
+    body.put("employee_id", emp.getId());
+    body.put("department_id", dep.getId());
+    body.put("position_id", pos.getId());
+    body.put("start_date", LocalDate.now().toString());
+    body.put("end_date", null);
     body.put("rate", new BigDecimal("1.0"));
     body.put("salary", 1000);
 
@@ -63,10 +63,10 @@ class EmploymentsIT extends BaseIntegrationTest {
   private EmployeeDto createEmployee(String first, String last, String email, String phone)
       throws Exception {
     Map<String, Object> b = new HashMap<>();
-    b.put("firstName", first);
-    b.put("lastName", last);
-    b.put("middleName", null);
-    b.put("workEmail", email);
+    b.put("first_name", first);
+    b.put("last_name", last);
+    b.put("middle_name", null);
+    b.put("work_email", email);
     b.put("phone", phone);
     MvcResult res =
         mvc.perform(
@@ -94,8 +94,8 @@ class EmploymentsIT extends BaseIntegrationTest {
     Map<String, Object> b = new HashMap<>();
     b.put("code", code);
     b.put("name", name);
-    b.put("facultyId", facId);
-    b.put("headEmployeeId", headId);
+    b.put("faculty_id", facId);
+    b.put("head_employee_id", headId);
     MvcResult res =
         mvc.perform(
                 post("/api/v1/departments")

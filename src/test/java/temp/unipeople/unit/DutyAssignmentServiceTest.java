@@ -43,9 +43,7 @@ class DutyAssignmentServiceTest {
 
   @BeforeEach
   void setUp() {
-    service =
-        new DutyAssignmentService(
-            dutyRepository, employeeRepo, dutyRepo, assignmentRepo, mapper, em);
+    service = new DutyAssignmentService(assignmentRepo, mapper, em);
   }
 
   @Test

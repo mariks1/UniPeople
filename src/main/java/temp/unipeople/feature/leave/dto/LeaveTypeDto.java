@@ -1,5 +1,7 @@
 package temp.unipeople.feature.leave.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
 import lombok.Builder;
 import lombok.Data;
@@ -14,5 +16,8 @@ public class LeaveTypeDto {
   private String name;
   private String code;
   boolean paid;
+
+  @JsonProperty("max_days_per_year")
+  @JsonAlias("max_days_per_year")
   Integer maxDaysPerYear;
 }
