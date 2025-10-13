@@ -72,11 +72,22 @@ class EmployeeControllerTest {
     when(service.get(id)).thenReturn(EmployeeDto.builder().build());
     mvc.perform(get("/api/v1/employees/{id}", id)).andExpect(status().isOk());
 
+    // <-- валидное тело для создания
+    CreateEmployeeDto createBody =
+        CreateEmployeeDto.builder()
+            .firstName("A")
+            .lastName("B")
+            .middleName(null)
+            .workEmail("a@uni.local")
+            .phone("+79990000001")
+            .departmentId(null)
+            .build();
+
     when(service.create(any())).thenReturn(EmployeeDto.builder().build());
     mvc.perform(
             post("/api/v1/employees")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(om.writeValueAsBytes(CreateEmployeeDto.builder().firstName("A").build())))
+                .content(om.writeValueAsBytes(createBody)))
         .andExpect(status().isCreated());
 
     when(service.update(eq(id), any())).thenReturn(EmployeeDto.builder().build());
