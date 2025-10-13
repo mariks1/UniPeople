@@ -1,4 +1,4 @@
-package temp.unipeople.feature.flow;
+package temp.unipeople;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
-import temp.unipeople.BaseIntegrationTest;
 import temp.unipeople.feature.department.dto.DepartmentDto;
 import temp.unipeople.feature.employee.dto.EmployeeDto;
 import temp.unipeople.feature.faculty.dto.FacultyDto;

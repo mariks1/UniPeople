@@ -20,23 +20,24 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
       """
     select r from LeaveRequest r
      where r.employeeId = :emp
-       and r.status in (temp.unipeople.feature.leave.request.entity.LeaveRequest.Status.APPROVED,
-                        temp.unipeople.feature.leave.request.entity.LeaveRequest.Status.PENDING)
+       and r.status in (temp.unipeople.feature.leave.entity.LeaveRequest.Status.APPROVED,
+                        temp.unipeople.feature.leave.entity.LeaveRequest.Status.PENDING)
        and (r.dateFrom <= :to and r.dateTo >= :from)
   """)
   List<LeaveRequest> findOverlaps(
       @Param("emp") UUID emp, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
   @Query(
-      """
-    select coalesce(sum(d),0) from (
-      select (r.dateTo - r.dateFrom + 1) as d
-      from LeaveRequest r
-      where r.employeeId = :emp and r.typeId = :type
-        and r.status = temp.unipeople.feature.leave.request.entity.LeaveRequest.Status.APPROVED
-        and extract(year from r.dateFrom) = :year
-    )
-  """)
-  Integer sumApprovedDaysForYear(
+      value =
+          """
+  select coalesce(sum((r.date_to - r.date_from + 1)), 0)::int
+  from leave_request r
+  where r.employee_id = :emp
+    and r.type_id     = :type
+    and r.status      = 'APPROVED'
+    and extract(year from r.date_from) = :year
+""",
+      nativeQuery = true)
+  int sumApprovedDaysForYear(
       @Param("emp") UUID emp, @Param("type") UUID type, @Param("year") int year);
 }

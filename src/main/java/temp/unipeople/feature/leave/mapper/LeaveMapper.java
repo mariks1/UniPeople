@@ -26,7 +26,7 @@ public interface LeaveMapper {
   @Mapping(target = "id", ignore = true)
   @Mapping(
       target = "status",
-      expression = "java(dto.submit() ? LeaveRequest.Status.PENDING : LeaveRequest.Status.DRAFT)")
+      expression = "java(dto.isSubmit() ? LeaveRequest.Status.PENDING : LeaveRequest.Status.DRAFT)")
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
   LeaveRequest toEntity(CreateLeaveRequestDto dto);

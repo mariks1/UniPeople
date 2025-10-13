@@ -1,5 +1,11 @@
 package temp.unipeople.feature.leave.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +21,21 @@ import temp.unipeople.feature.leave.service.LeaveService;
 @RestController
 @RequestMapping("/api/v1/leave-types")
 @RequiredArgsConstructor
+@Tag(name = "LeaveType", description = "Справочник видов отпусков")
 public class LeaveTypeController {
 
   private final LeaveService service;
 
+  @Operation(
+      summary = "Список типов отпусков (пагинация)",
+      description = "X-Total-Count в заголовке.")
+  @ApiResponse(
+      responseCode = "200",
+      headers =
+          @Header(
+              name = "X-Total-Count",
+              description = "Общее количество записей",
+              schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<LeaveTypeDto>> list(Pageable p) {
     var page = service.listTypes(p);
@@ -27,17 +44,30 @@ public class LeaveTypeController {
     return new ResponseEntity<>(page, h, HttpStatus.OK);
   }
 
+  @Operation(summary = "Создать тип отпуска")
+  @ApiResponses({
+    @ApiResponse(responseCode = "201"),
+    @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
+  })
   @PostMapping
   public ResponseEntity<LeaveTypeDto> create(@Valid @RequestBody CreateLeaveTypeDto body) {
     return ResponseEntity.status(HttpStatus.CREATED).body(service.createType(body));
   }
 
+  @Operation(summary = "Обновить тип отпуска")
+  @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PatchMapping("/{id}")
   public ResponseEntity<LeaveTypeDto> update(
       @PathVariable UUID id, @Valid @RequestBody UpdateLeaveTypeDto body) {
     return ResponseEntity.ok(service.updateType(id, body));
   }
 
+  @Operation(summary = "Удалить тип отпуска")
+  @ApiResponses({
+    @ApiResponse(responseCode = "204"),
+    @ApiResponse(responseCode = "404"),
+    @ApiResponse(responseCode = "409", description = "Есть связанные заявки")
+  })
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     service.deleteType(id);
