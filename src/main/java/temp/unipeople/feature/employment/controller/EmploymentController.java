@@ -33,7 +33,7 @@ public class EmploymentController {
   @Operation(summary = "Получить назначение по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
-  public ResponseEntity<EmploymentDto> get(@PathVariable UUID id) {
+  public ResponseEntity<EmploymentDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(employmentService.get(id));
   }
 
@@ -53,7 +53,7 @@ public class EmploymentController {
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
   public ResponseEntity<EmploymentDto> update(
-      @PathVariable UUID id, @RequestBody UpdateEmploymentDto body) {
+      @PathVariable("id") UUID id, @RequestBody UpdateEmploymentDto body) {
     return ResponseEntity.ok(employmentService.update(id, body));
   }
 
@@ -61,7 +61,7 @@ public class EmploymentController {
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/close")
   public ResponseEntity<EmploymentDto> close(
-      @PathVariable UUID id, @RequestBody(required = false) CloseEmploymentDto body) {
+      @PathVariable("id") UUID id, @RequestBody(required = false) CloseEmploymentDto body) {
     return ResponseEntity.ok(employmentService.close(id, body));
   }
 
@@ -75,7 +75,7 @@ public class EmploymentController {
               schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
   public ResponseEntity<Page<EmploymentDto>> listByEmployee(
-      @PathVariable UUID employeeId, Pageable pageable) {
+      @PathVariable("employeeId") UUID employeeId, Pageable pageable) {
     Page<EmploymentDto> page = employmentService.listByEmployee(employeeId, pageable);
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
@@ -94,8 +94,8 @@ public class EmploymentController {
               schema = @Schema(type = "integer")))
   @GetMapping("/by-department/{departmentId}")
   public ResponseEntity<Page<EmploymentDto>> listByDepartment(
-      @PathVariable UUID departmentId,
-      @RequestParam(required = false, defaultValue = "true") boolean active,
+      @PathVariable("departmentId") UUID departmentId,
+      @RequestParam(required = false, defaultValue = "true", value = "active") boolean active,
       Pageable pageable) {
     Page<EmploymentDto> page = employmentService.listByDepartment(departmentId, active, pageable);
     HttpHeaders headers = new HttpHeaders();

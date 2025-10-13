@@ -31,7 +31,7 @@ public class LeaveRequestController {
   @Operation(summary = "Получить заявку на отпуск по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
-  public ResponseEntity<LeaveRequestDto> get(@PathVariable UUID id) {
+  public ResponseEntity<LeaveRequestDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(service.get(id));
   }
 
@@ -54,7 +54,7 @@ public class LeaveRequestController {
   })
   @PatchMapping("/{id}")
   public ResponseEntity<LeaveRequestDto> update(
-      @PathVariable UUID id, @Valid @RequestBody UpdateLeaveRequestDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody UpdateLeaveRequestDto body) {
     return ResponseEntity.ok(service.update(id, body));
   }
 
@@ -66,7 +66,7 @@ public class LeaveRequestController {
   })
   @PostMapping("/{id}/approve")
   public ResponseEntity<LeaveRequestDto> approve(
-      @PathVariable UUID id, @Valid @RequestBody DecisionDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
     return ResponseEntity.ok(service.approve(id, body));
   }
 
@@ -78,7 +78,7 @@ public class LeaveRequestController {
   })
   @PostMapping("/{id}/reject")
   public ResponseEntity<LeaveRequestDto> reject(
-      @PathVariable UUID id, @Valid @RequestBody DecisionDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
     return ResponseEntity.ok(service.reject(id, body));
   }
 
@@ -89,7 +89,7 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404")
   })
   @PostMapping("/{id}/cancel")
-  public ResponseEntity<LeaveRequestDto> cancel(@PathVariable UUID id) {
+  public ResponseEntity<LeaveRequestDto> cancel(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(service.cancel(id));
   }
 
@@ -103,7 +103,7 @@ public class LeaveRequestController {
               schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
   public ResponseEntity<Page<LeaveRequestDto>> byEmployee(
-      @PathVariable UUID employeeId, Pageable p) {
+      @PathVariable("employeeId") UUID employeeId, Pageable p) {
     var page = service.listByEmployee(employeeId, p);
     var h = new HttpHeaders();
     h.add("X-Total-Count", String.valueOf(page.getTotalElements()));
@@ -120,7 +120,7 @@ public class LeaveRequestController {
               schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<LeaveRequestDto>> byStatus(
-      @RequestParam LeaveRequest.Status status, Pageable p) {
+      @RequestParam("status") LeaveRequest.Status status, Pageable p) {
     var page = service.listByStatus(status, p);
     var h = new HttpHeaders();
     h.add("X-Total-Count", String.valueOf(page.getTotalElements()));

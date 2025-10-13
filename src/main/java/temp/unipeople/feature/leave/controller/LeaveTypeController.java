@@ -58,7 +58,7 @@ public class LeaveTypeController {
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PatchMapping("/{id}")
   public ResponseEntity<LeaveTypeDto> update(
-      @PathVariable UUID id, @Valid @RequestBody UpdateLeaveTypeDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody UpdateLeaveTypeDto body) {
     return ResponseEntity.ok(service.updateType(id, body));
   }
 
@@ -69,7 +69,7 @@ public class LeaveTypeController {
     @ApiResponse(responseCode = "409", description = "Есть связанные заявки")
   })
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     service.deleteType(id);
     return ResponseEntity.noContent().build();
   }

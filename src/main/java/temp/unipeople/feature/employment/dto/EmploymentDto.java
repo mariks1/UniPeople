@@ -4,10 +4,14 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import lombok.Builder;
 import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
 import temp.unipeople.feature.employment.entity.Employment;
 
 @Data
+@Builder
+@Jacksonized
 public class EmploymentDto {
   UUID id;
   UUID employeeId;

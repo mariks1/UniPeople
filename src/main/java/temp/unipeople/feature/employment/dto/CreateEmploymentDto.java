@@ -4,9 +4,13 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
+import lombok.Builder;
 import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
 
 @Data
+@Builder
+@Jacksonized
 public class CreateEmploymentDto {
 
   @NotNull UUID employeeId;

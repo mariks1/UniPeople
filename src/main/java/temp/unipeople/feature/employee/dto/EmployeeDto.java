@@ -4,9 +4,12 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.Builder;
 import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
+import temp.unipeople.feature.employee.entity.Employee;
 
 @Data
 @Builder
+@Jacksonized
 public class EmployeeDto {
   UUID id;
   String firstName;
@@ -15,7 +18,7 @@ public class EmployeeDto {
   String workEmail;
   String phone;
   UUID departmentId;
-  String status;
+  Employee.Status status;
   Instant createdAt;
   Instant updatedAt;
 }
