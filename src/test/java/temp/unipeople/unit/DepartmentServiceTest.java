@@ -20,22 +20,22 @@ import temp.unipeople.feature.department.mapper.DepartmentMapper;
 import temp.unipeople.feature.department.repository.DepartmentRepository;
 import temp.unipeople.feature.department.service.DepartmentService;
 import temp.unipeople.feature.employee.entity.Employee;
-import temp.unipeople.feature.employee.repository.EmployeeRepository;
+import temp.unipeople.feature.employee.service.EmployeeReader;
 import temp.unipeople.feature.faculty.entity.Faculty;
 
 @ExtendWith(MockitoExtension.class)
 class DepartmentServiceTest {
 
   @Mock DepartmentRepository departmentRepository;
-  @Mock EmployeeRepository employeeRepository;
   @Mock DepartmentMapper mapper;
   @Mock EntityManager em;
+  @Mock EmployeeReader employeeReader;
 
   DepartmentService service;
 
   @BeforeEach
   void setUp() {
-    service = new DepartmentService(departmentRepository, employeeRepository, mapper, em);
+    service = new DepartmentService(departmentRepository, mapper, em, employeeReader);
   }
 
   @Test
@@ -163,7 +163,7 @@ class DepartmentServiceTest {
     Employee emp = new Employee();
 
     when(departmentRepository.findById(depId)).thenReturn(Optional.of(dep));
-    when(employeeRepository.findById(empId)).thenReturn(Optional.of(emp));
+    when(employeeReader.require(empId)).thenReturn(emp);
     when(mapper.toDto(dep)).thenReturn(DepartmentDto.builder().build());
 
     assertNotNull(service.setHead(depId, empId));
@@ -181,7 +181,8 @@ class DepartmentServiceTest {
   void setHead_empNotFound() {
     UUID depId = UUID.randomUUID();
     when(departmentRepository.findById(depId)).thenReturn(Optional.of(new Department()));
-    when(employeeRepository.findById(any())).thenReturn(Optional.empty());
+    when(employeeReader.require(any()))
+        .thenThrow(new EntityNotFoundException("employee not found"));
 
     assertThrows(EntityNotFoundException.class, () -> service.setHead(depId, UUID.randomUUID()));
   }

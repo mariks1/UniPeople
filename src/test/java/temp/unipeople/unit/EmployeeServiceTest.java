@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import temp.unipeople.feature.department.entity.Department;
-import temp.unipeople.feature.department.repository.DepartmentRepository;
+import temp.unipeople.feature.department.service.DepartmentReader;
 import temp.unipeople.feature.employee.dto.*;
 import temp.unipeople.feature.employee.entity.Employee;
 import temp.unipeople.feature.employee.mapper.EmployeeMapper;
@@ -28,15 +28,15 @@ import temp.unipeople.feature.employee.service.EmployeeService;
 class EmployeeServiceTest {
 
   @Mock EmployeeRepository employeeRepo;
-  @Mock DepartmentRepository departmentRepo;
   @Mock EmployeeMapper mapper;
   @Mock EntityManager em;
+  @Mock DepartmentReader departmentReader;
 
   EmployeeService service;
 
   @BeforeEach
   void setUp() {
-    service = new EmployeeService(employeeRepo, departmentRepo, mapper, em);
+    service = new EmployeeService(employeeRepo, mapper, em, departmentReader);
   }
 
   @Test
@@ -110,7 +110,7 @@ class EmployeeServiceTest {
     when(employeeRepo.findById(id)).thenReturn(Optional.of(active));
     when(mapper.toDto(active)).thenReturn(EmployeeDto.builder().build());
     assertNotNull(service.fire(id));
-    verify(departmentRepo).clearHeadByEmployeeId(id);
+    verify(departmentReader).clearHeadByEmployeeId(id);
     assertNull(active.getDepartment());
     assertEquals(Employee.Status.FIRED, active.getStatus());
   }
@@ -140,7 +140,7 @@ class EmployeeServiceTest {
     verify(employeeRepo).findAll(captor.capture());
     Pageable passed = captor.getValue();
 
-    Sort.Order order = passed.getSort().getOrderFor("created_at");
+    Sort.Order order = passed.getSort().getOrderFor("createdAt");
     assertNotNull(order);
     assertTrue(order.isDescending());
   }
@@ -148,7 +148,7 @@ class EmployeeServiceTest {
   @Test
   void stream_handlesCursorAndSizeBounds() {
     Slice<Employee> s1 = new SliceImpl<>(List.of(new Employee()));
-    when(employeeRepo.findAllByOrderByCreatedAtDesc(any())).thenReturn(s1);
+    when(employeeRepo.findAllBy(any())).thenReturn(s1);
     when(mapper.toDto(any(Employee.class)))
         .thenAnswer(inv -> EmployeeDto.builder().createdAt(Instant.now()).build());
 
@@ -157,7 +157,7 @@ class EmployeeServiceTest {
     assertTrue(res1.containsKey("nextCursor"));
 
     Slice<Employee> s2 = new SliceImpl<>(Collections.emptyList());
-    when(employeeRepo.findByCreatedAtLessThanOrderByCreatedAtDesc(any(), any())).thenReturn(s2);
+    when(employeeRepo.findByCreatedAtLessThan(any(), any())).thenReturn(s2);
 
     var res2 = service.stream(Instant.now(), 5000);
     assertEquals(false, res2.get("hasNext"));

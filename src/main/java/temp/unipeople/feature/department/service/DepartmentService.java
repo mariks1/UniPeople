@@ -17,7 +17,7 @@ import temp.unipeople.feature.department.entity.Department;
 import temp.unipeople.feature.department.mapper.DepartmentMapper;
 import temp.unipeople.feature.department.repository.DepartmentRepository;
 import temp.unipeople.feature.employee.entity.Employee;
-import temp.unipeople.feature.employee.repository.EmployeeRepository;
+import temp.unipeople.feature.employee.service.EmployeeReader;
 import temp.unipeople.feature.faculty.entity.Faculty;
 
 @Service
@@ -25,9 +25,9 @@ import temp.unipeople.feature.faculty.entity.Faculty;
 public class DepartmentService {
 
   private final DepartmentRepository departmentRepository;
-  private final EmployeeRepository employeeRepository;
   private final DepartmentMapper mapper;
   private final EntityManager em;
+  private final EmployeeReader employeeReader;
 
   @Transactional(readOnly = true)
   public DepartmentDto get(UUID id) {
@@ -87,10 +87,7 @@ public class DepartmentService {
             .findById(deptId)
             .orElseThrow(() -> new EntityNotFoundException("department not found: " + deptId));
 
-    Employee emp =
-        employeeRepository
-            .findById(employeeId)
-            .orElseThrow(() -> new EntityNotFoundException("employee not found: " + employeeId));
+    Employee emp = employeeReader.require(employeeId);
 
     dep.setHeadEmployee(emp);
     return mapper.toDto(dep);

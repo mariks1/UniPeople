@@ -28,5 +28,7 @@ public class UpdateEmployeeDto {
   @JsonProperty("middle_name")
   String middleName;
 
+  @JsonAlias("department_id")
+  @JsonProperty("department_id")
   UUID departmentId;
 }

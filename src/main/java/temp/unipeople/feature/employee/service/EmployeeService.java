@@ -13,7 +13,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import temp.unipeople.feature.department.entity.Department;
-import temp.unipeople.feature.department.repository.DepartmentRepository;
+import temp.unipeople.feature.department.service.DepartmentReader;
 import temp.unipeople.feature.employee.dto.CreateEmployeeDto;
 import temp.unipeople.feature.employee.dto.EmployeeDto;
 import temp.unipeople.feature.employee.dto.UpdateEmployeeDto;
@@ -26,9 +26,12 @@ import temp.unipeople.feature.employee.repository.EmployeeRepository;
 public class EmployeeService {
 
   private final EmployeeRepository employeeRepository;
-  private final DepartmentRepository departmentRepository;
   private final EmployeeMapper mapper;
   private final EntityManager entityManager;
+  private final DepartmentReader departmentReader;
+
+  private static final Sort DEFAULT_SORT =
+      Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
   @Transactional
   public EmployeeDto create(CreateEmployeeDto dto) {
@@ -85,7 +88,7 @@ public class EmployeeService {
       return mapper.toDto(employee);
     }
 
-    departmentRepository.clearHeadByEmployeeId(id);
+    departmentReader.clearHeadByEmployeeId(id);
 
     employee.setDepartment(null);
     employee.setStatus(Employee.Status.FIRED);
@@ -109,22 +112,19 @@ public class EmployeeService {
     Pageable sorted =
         pageable.getSort().isSorted()
             ? pageable
-            : PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Direction.DESC, "created_at"));
+            : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), DEFAULT_SORT);
     return employeeRepository.findAll(sorted).map(mapper::toDto);
   }
 
   @Transactional(readOnly = true)
   public Map<String, Object> stream(Instant cursor, int size) {
     int limit = Math.max(1, Math.min(size, 50));
-    Pageable pageReq = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "created_at"));
+    Pageable pageReq = PageRequest.of(0, limit, DEFAULT_SORT);
 
     Slice<Employee> slice =
         (cursor == null)
-            ? employeeRepository.findAllByOrderByCreatedAtDesc(pageReq)
-            : employeeRepository.findByCreatedAtLessThanOrderByCreatedAtDesc(cursor, pageReq);
+            ? employeeRepository.findAllBy(pageReq)
+            : employeeRepository.findByCreatedAtLessThan(cursor, pageReq);
 
     List<EmployeeDto> items = slice.getContent().stream().map(mapper::toDto).toList();
 

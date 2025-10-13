@@ -18,17 +18,12 @@ import temp.unipeople.feature.duty.entity.DepartmentDutyAssignment;
 import temp.unipeople.feature.duty.entity.Duty;
 import temp.unipeople.feature.duty.mapper.DutyAssignmentMapper;
 import temp.unipeople.feature.duty.repository.DutyAssignmentRepository;
-import temp.unipeople.feature.duty.repository.DutyRepository;
 import temp.unipeople.feature.employee.entity.Employee;
-import temp.unipeople.feature.employee.repository.EmployeeRepository;
 
 @Service
 @RequiredArgsConstructor
 public class DutyAssignmentService {
 
-  private final DutyRepository dutyRepository;
-  private final EmployeeRepository employeeRepo;
-  private final DutyRepository dutyRepo;
   private final DutyAssignmentRepository assignmentRepo;
   private final DutyAssignmentMapper mapper;
   private final EntityManager em;
@@ -72,7 +67,7 @@ public class DutyAssignmentService {
             : PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                Sort.by(Sort.Direction.DESC, "assigned_at"));
+                Sort.by(Sort.Direction.DESC, "assignedAt"));
     return assignmentRepo.findByDepartmentId(departmentId, sorted).map(mapper::toDto);
   }
 

@@ -96,7 +96,7 @@ public class DutyService {
             : PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                Sort.by(Sort.Direction.DESC, "assigned_at"));
+                Sort.by(Sort.Direction.DESC, "assignedAt"));
     Page<DepartmentDutyAssignment> page = dutyAssignmentRepository.findByDutyId(dutyId, sorted);
     return page.map(dutyAssignmentMapper::toDto);
   }

@@ -43,9 +43,7 @@ class DutyAssignmentServiceTest {
 
   @BeforeEach
   void setUp() {
-    service =
-        new DutyAssignmentService(
-            dutyRepository, employeeRepo, dutyRepo, assignmentRepo, mapper, em);
+    service = new DutyAssignmentService(assignmentRepo, mapper, em);
   }
 
   @Test
@@ -126,7 +124,7 @@ class DutyAssignmentServiceTest {
 
     ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
     verify(assignmentRepo).findByDepartmentId(eq(depId), captor.capture());
-    Sort.Order order = captor.getValue().getSort().getOrderFor("assigned_at");
+    Sort.Order order = captor.getValue().getSort().getOrderFor("assignedAt");
     assertNotNull(order);
     assertEquals(Sort.Direction.DESC, order.getDirection());
   }

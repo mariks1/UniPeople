@@ -18,6 +18,8 @@ public class CreateEmployeeDto {
 
   @NotBlank
   @Size(max = 100)
+  @JsonAlias("first_name")
+  @JsonProperty("first_name")
   String firstName;
 
   @NotBlank
