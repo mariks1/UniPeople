@@ -21,12 +21,13 @@ public class FacultyService {
   private final FacultyMapper mapper;
 
   public Page<FacultyDto> page(Pageable pageable) {
-    Pageable sorted = pageable.getSort().isSorted()
+    Pageable sorted =
+        pageable.getSort().isSorted()
             ? pageable
             : PageRequest.of(
-            pageable.getPageNumber(),
-            pageable.getPageSize(),
-            Sort.by(Sort.Order.asc("code"), Sort.Order.asc("name")));
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("code"), Sort.Order.asc("name")));
     return repo.findAll(sorted).map(mapper::toDto);
   }
 
