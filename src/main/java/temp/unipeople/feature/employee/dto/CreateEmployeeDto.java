@@ -7,9 +7,11 @@ import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import lombok.Builder;
 import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
 
 @Data
 @Builder
+@Jacksonized
 public class CreateEmployeeDto {
 
   @NotBlank

@@ -68,7 +68,8 @@ public class EmployeeController {
   })
   @GetMapping("/stream")
   public ResponseEntity<Map<String, Object>> stream(
-      @RequestParam(required = false) Instant cursor, @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(name = "cursor", required = false) Instant cursor,
+      @RequestParam(name = "size", defaultValue = "20") int size) {
     Map<String, Object> body = employeeService.stream(cursor, size);
     return ResponseEntity.ok(body);
   }
@@ -105,7 +106,7 @@ public class EmployeeController {
   @Operation(summary = "Удалить сотрудника")
   @ApiResponses({@ApiResponse(responseCode = "204"), @ApiResponse(responseCode = "404")})
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     employeeService.delete(id);
     return ResponseEntity.noContent().build();
   }
@@ -113,14 +114,14 @@ public class EmployeeController {
   @Operation(summary = "Уволить сотрудника (status=FIRED)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/fire")
-  public ResponseEntity<EmployeeDto> fire(@PathVariable UUID id) {
+  public ResponseEntity<EmployeeDto> fire(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(employeeService.fire(id));
   }
 
   @Operation(summary = "Активировать сотрудника (status=ACTIVE)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/activate")
-  public ResponseEntity<Object> activate(@PathVariable UUID id) {
+  public ResponseEntity<Object> activate(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(employeeService.activate(id));
   }
 }

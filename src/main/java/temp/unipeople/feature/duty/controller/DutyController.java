@@ -53,7 +53,7 @@ public class DutyController {
     @ApiResponse(responseCode = "404", description = "Обязанность не найдена")
   })
   @GetMapping("/{id}")
-  public ResponseEntity<DutyDto> get(@PathVariable UUID id) {
+  public ResponseEntity<DutyDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(service.get(id));
   }
 
@@ -76,7 +76,7 @@ public class DutyController {
   })
   @PutMapping("/{id}")
   public ResponseEntity<DutyDto> update(
-      @PathVariable UUID id, @Valid @RequestBody UpdateDutyDto dto) {
+      @PathVariable("id") UUID id, @Valid @RequestBody UpdateDutyDto dto) {
     return ResponseEntity.ok(service.update(id, dto));
   }
 
@@ -87,7 +87,7 @@ public class DutyController {
     @ApiResponse(responseCode = "409", description = "Есть связанные назначения")
   })
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     service.delete(id);
     return ResponseEntity.noContent().build();
   }
@@ -104,7 +104,7 @@ public class DutyController {
               schema = @Schema(type = "integer")))
   @GetMapping("/{id}/assignments")
   public ResponseEntity<Page<DutyAssignmentDto>> listAssignments(
-      @PathVariable UUID id, Pageable pageable) {
+      @PathVariable("id") UUID id, Pageable pageable) {
     Page<DutyAssignmentDto> page = service.listAssignments(id, pageable);
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
@@ -115,7 +115,7 @@ public class DutyController {
   /** Список назначений обязанностей в департаменте (пагинация + total) */
   @GetMapping("/{id}/duties/assignments")
   public ResponseEntity<Page<DutyAssignmentDto>> listDutyAssignments(
-      @PathVariable UUID id, Pageable pageable) {
+      @PathVariable("id") UUID id, Pageable pageable) {
     Page<DutyAssignmentDto> page = assignmentService.list(id, pageable);
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));

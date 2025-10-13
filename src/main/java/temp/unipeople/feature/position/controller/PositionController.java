@@ -42,7 +42,7 @@ public class PositionController {
               schema = @Schema(type = "integer")))
   @GetMapping
   public ResponseEntity<Page<PositionDto>> findAll(
-      @RequestParam(required = false) String q, Pageable pageable) {
+      @RequestParam(name = "q", required = false) String q, Pageable pageable) {
     Page<PositionDto> page = positionService.findAll(q, pageable);
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
@@ -52,7 +52,7 @@ public class PositionController {
   @Operation(summary = "Получить должность по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
-  public ResponseEntity<PositionDto> get(@PathVariable UUID id) {
+  public ResponseEntity<PositionDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(positionService.get(id));
   }
 
@@ -75,7 +75,7 @@ public class PositionController {
   })
   @PutMapping("/{id}")
   public ResponseEntity<PositionDto> update(
-      @PathVariable UUID id, @Valid @RequestBody UpdatePositionDto body) {
+      @PathVariable("id") UUID id, @Valid @RequestBody UpdatePositionDto body) {
     return ResponseEntity.ok(positionService.update(id, body));
   }
 
@@ -86,7 +86,7 @@ public class PositionController {
     @ApiResponse(responseCode = "409", description = "Есть связанные назначения")
   })
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     positionService.delete(id);
     return ResponseEntity.noContent().build();
   }

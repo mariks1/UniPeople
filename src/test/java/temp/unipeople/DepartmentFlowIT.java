@@ -4,10 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
@@ -22,8 +20,6 @@ import temp.unipeople.feature.faculty.dto.FacultyDto;
  */
 @ActiveProfiles("test")
 class DepartmentFlowIT extends BaseIntegrationTest {
-
-  @Autowired ObjectMapper om;
 
   @Test
   void createEmployeesFacultiesDepartmentAndAssign() throws Exception {

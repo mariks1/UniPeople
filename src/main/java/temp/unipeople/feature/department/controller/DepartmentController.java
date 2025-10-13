@@ -86,7 +86,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "409", description = "Есть связанные данные")
   })
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     service.delete(id);
     return ResponseEntity.noContent().build();
   }
@@ -98,7 +98,7 @@ public class DepartmentController {
   })
   @PutMapping("/{id}/head/{employeeId}")
   public ResponseEntity<DepartmentDto> setHead(
-      @PathVariable UUID id, @PathVariable UUID employeeId) {
+      @PathVariable("id") UUID id, @PathVariable("employeeId") UUID employeeId) {
     DepartmentDto dto = service.setHead(id, employeeId);
     return ResponseEntity.ok(dto);
   }
@@ -109,7 +109,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "404", description = "Департамент не найден")
   })
   @DeleteMapping("/{id}/head")
-  public ResponseEntity<Void> removeHead(@PathVariable UUID id) {
+  public ResponseEntity<Void> removeHead(@PathVariable("id") UUID id) {
     service.removeHead(id);
     return ResponseEntity.noContent().build();
   }
@@ -127,7 +127,8 @@ public class DepartmentController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/{id}/employees")
-  public ResponseEntity<Page<Object>> listEmployees(@PathVariable UUID id, Pageable pageable) {
+  public ResponseEntity<Page<Object>> listEmployees(
+      @PathVariable("id") UUID id, Pageable pageable) {
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", "0");
     return new ResponseEntity<>(Page.empty(pageable), headers, HttpStatus.NOT_IMPLEMENTED);
