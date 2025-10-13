@@ -126,7 +126,7 @@ class DutyAssignmentServiceTest {
 
     ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
     verify(assignmentRepo).findByDepartmentId(eq(depId), captor.capture());
-    Sort.Order order = captor.getValue().getSort().getOrderFor("assignedAt");
+    Sort.Order order = captor.getValue().getSort().getOrderFor("assigned_at");
     assertNotNull(order);
     assertEquals(Sort.Direction.DESC, order.getDirection());
   }

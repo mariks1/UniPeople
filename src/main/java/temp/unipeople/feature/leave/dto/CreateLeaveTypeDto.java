@@ -1,5 +1,7 @@
 package temp.unipeople.feature.leave.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -22,5 +24,8 @@ public class CreateLeaveTypeDto {
 
   boolean paid;
 
-  @Positive Integer maxDaysPerYear;
+  @Positive
+  @JsonAlias("max_days_per_year")
+  @JsonProperty("max_days_per_year")
+  Integer maxDaysPerYear;
 }

@@ -1,5 +1,7 @@
 package temp.unipeople.feature.department.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
@@ -13,7 +15,15 @@ import lombok.extern.jackson.Jacksonized;
 public class CreateDepartmentDto {
 
   @NotBlank String code;
+
   @NotBlank String name;
-  @NotNull UUID facultyId;
+
+  @NotNull
+  @JsonProperty("faculty_id")
+  @JsonAlias("faculty_id")
+  UUID facultyId;
+
+  @JsonProperty("head_employee_id")
+  @JsonAlias("head_employee_id")
   UUID headEmployeeId;
 }

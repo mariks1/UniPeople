@@ -35,7 +35,7 @@ class EmployeesIT extends BaseIntegrationTest {
 
     FacultyDto fac = createFaculty("FAC-2", "Math");
     DepartmentDto dep = createDepartment("DEP-2", "Algebra", fac.getId(), null);
-    Map<String, Object> patch = Map.of("departmentId", dep.getId());
+    Map<String, Object> patch = Map.of("department_id", dep.getId());
     MvcResult upd =
         mvc.perform(
                 put("/api/v1/employees/{id}", e2.getId())
@@ -66,10 +66,10 @@ class EmployeesIT extends BaseIntegrationTest {
   private EmployeeDto createEmployee(String first, String last, String email, String phone)
       throws Exception {
     Map<String, Object> body = new HashMap<>();
-    body.put("firstName", first);
-    body.put("lastName", last);
-    body.put("middleName", null);
-    body.put("workEmail", email);
+    body.put("first_name", first);
+    body.put("last_name", last);
+    body.put("middle_name", null);
+    body.put("work_email", email);
     body.put("phone", phone);
     MvcResult res =
         mvc.perform(
@@ -98,8 +98,8 @@ class EmployeesIT extends BaseIntegrationTest {
     Map<String, Object> body = new HashMap<>();
     body.put("code", code);
     body.put("name", name);
-    body.put("facultyId", facId);
-    body.put("headEmployeeId", headId);
+    body.put("faculty_id", facId);
+    body.put("head_employee_id", headId);
     MvcResult res =
         mvc.perform(
                 post("/api/v1/departments")

@@ -140,7 +140,7 @@ class EmployeeServiceTest {
     verify(employeeRepo).findAll(captor.capture());
     Pageable passed = captor.getValue();
 
-    Sort.Order order = passed.getSort().getOrderFor("createdAt");
+    Sort.Order order = passed.getSort().getOrderFor("created_at");
     assertNotNull(order);
     assertTrue(order.isDescending());
   }

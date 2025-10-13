@@ -156,7 +156,7 @@ class DutyServiceTest {
 
     var captor = ArgumentCaptor.forClass(Pageable.class);
     verify(assignRepo).findByDutyId(eq(dutyId), captor.capture());
-    Sort.Order order = captor.getValue().getSort().getOrderFor("assignedAt");
+    Sort.Order order = captor.getValue().getSort().getOrderFor("assigned_at");
     assertNotNull(order);
     assertEquals(Sort.Direction.DESC, order.getDirection());
   }

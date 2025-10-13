@@ -41,10 +41,10 @@ class LeaveControllersIT extends BaseIntegrationTest {
         .andExpect(status().isNoContent());
 
     Map<String, Object> req = new HashMap<>();
-    req.put("employeeId", emp.getId());
-    req.put("typeId", typeForUse.getId());
-    req.put("dateFrom", LocalDate.now().plusDays(3).toString());
-    req.put("dateTo", LocalDate.now().plusDays(5).toString());
+    req.put("employee_id", emp.getId());
+    req.put("type_id", typeForUse.getId());
+    req.put("date_from", LocalDate.now().plusDays(3).toString());
+    req.put("date_to", LocalDate.now().plusDays(5).toString());
 
     MvcResult created =
         mvc.perform(
@@ -73,10 +73,10 @@ class LeaveControllersIT extends BaseIntegrationTest {
         .andExpect(status().isConflict());
 
     Map<String, Object> badReq = new HashMap<>();
-    badReq.put("employeeId", emp.getId());
-    badReq.put("typeId", typeForUse.getId());
-    badReq.put("dateFrom", LocalDate.now().plusDays(10).toString());
-    badReq.put("dateTo", LocalDate.now().plusDays(5).toString());
+    badReq.put("employee_id", emp.getId());
+    badReq.put("type_id", typeForUse.getId());
+    badReq.put("date_from", LocalDate.now().plusDays(10).toString());
+    badReq.put("date_to", LocalDate.now().plusDays(5).toString());
 
     mvc.perform(
             post("/api/v1/leave-requests")
@@ -88,10 +88,10 @@ class LeaveControllersIT extends BaseIntegrationTest {
   private EmployeeDto createEmployee(String first, String last, String email, String phone)
       throws Exception {
     Map<String, Object> b = new HashMap<>();
-    b.put("firstName", first);
-    b.put("lastName", last);
-    b.put("middleName", null);
-    b.put("workEmail", email);
+    b.put("first_name", first);
+    b.put("last_name", last);
+    b.put("middle_name", null);
+    b.put("work_email", email);
     b.put("phone", phone);
     MvcResult res =
         mvc.perform(
@@ -109,7 +109,7 @@ class LeaveControllersIT extends BaseIntegrationTest {
     b.put("code", code);
     b.put("name", name);
     b.put("paid", paid);
-    b.put("maxDaysPerYear", maxPerYear);
+    b.put("max_days_per_year", maxPerYear);
     MvcResult res =
         mvc.perform(
                 post("/api/v1/leave-types")

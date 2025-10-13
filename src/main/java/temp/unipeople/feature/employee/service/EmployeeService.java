@@ -112,14 +112,14 @@ public class EmployeeService {
             : PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                Sort.by(Sort.Direction.DESC, "createdAt"));
+                Sort.by(Sort.Direction.DESC, "created_at"));
     return employeeRepository.findAll(sorted).map(mapper::toDto);
   }
 
   @Transactional(readOnly = true)
   public Map<String, Object> stream(Instant cursor, int size) {
     int limit = Math.max(1, Math.min(size, 50));
-    Pageable pageReq = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+    Pageable pageReq = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "created_at"));
 
     Slice<Employee> slice =
         (cursor == null)

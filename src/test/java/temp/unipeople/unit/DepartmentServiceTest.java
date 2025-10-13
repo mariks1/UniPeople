@@ -219,7 +219,7 @@ class DepartmentServiceTest {
 
   @Test
   void findAll_keepsProvidedSort() {
-    Pageable in = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+    Pageable in = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "created_at"));
     when(departmentRepository.findAll(in)).thenReturn(Page.empty());
 
     service.findAll(in);

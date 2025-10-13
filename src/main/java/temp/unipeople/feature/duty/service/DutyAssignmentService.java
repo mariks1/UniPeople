@@ -72,7 +72,7 @@ public class DutyAssignmentService {
             : PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                Sort.by(Sort.Direction.DESC, "assignedAt"));
+                Sort.by(Sort.Direction.DESC, "assigned_at"));
     return assignmentRepo.findByDepartmentId(departmentId, sorted).map(mapper::toDto);
   }
 
