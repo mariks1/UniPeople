@@ -1,0 +1,22 @@
+server:
+  port: 0
+spring:
+  application:
+    name: leave-service
+  r2dbc:
+    url: r2dbc:postgresql://postgres:5432/unipeople
+    username: postgres
+    password: postgres
+    properties:
+      schema: leave
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://postgres:5432/unipeople
+    user: postgres
+    password: postgres
+    schemas: leave
+    locations: classpath:db/migration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka

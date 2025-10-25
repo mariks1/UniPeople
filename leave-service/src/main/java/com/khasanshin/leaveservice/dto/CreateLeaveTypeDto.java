@@ -1,0 +1,31 @@
+package com.khasanshin.leaveservice.dto;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import lombok.Builder;
+import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
+
+@Data
+@Builder
+@Jacksonized
+public class CreateLeaveTypeDto {
+
+  @NotBlank
+  @Size(max = 64)
+  private String code;
+
+  @NotBlank
+  @Size(max = 150)
+  private String name;
+
+  boolean paid;
+
+  @Positive
+  @JsonAlias("max_days_per_year")
+  @JsonProperty("max_days_per_year")
+  Integer maxDaysPerYear;
+}

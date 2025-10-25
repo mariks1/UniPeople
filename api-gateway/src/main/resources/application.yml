@@ -1,0 +1,90 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+          - id: employee-api
+            uri: lb://employee-service
+            predicates:
+              - Path=/api/v1/employees/**
+          - id: organization-api
+            uri: lb://organization-service
+            predicates:
+              - Path=/api/v1/departments/**,/api/v1/faculties/**,/api/v1/positions/**
+          - id: employment-api
+            uri: lb://employment-service
+            predicates:
+              - Path=/api/v1/employments/**
+          - id: duty-api
+            uri: lb://duty-service
+            predicates:
+              - Path=/api/v1/duty/**
+          - id: leave-requests-api
+            uri: lb://leave-service
+            predicates:
+              - Path=/api/v1/leave-requests/**
+          - id: leave-types-api
+            uri: lb://leave-service
+            predicates:
+              - Path=/api/v1/leave-types/**
+
+          - id: duty-docs
+            uri: lb://duty-service
+            predicates:
+              - Path=/docs/duty/v3/api-docs
+            filters:
+              - RewritePath=/docs/duty/(?<segment>.*), /$\{segment}
+
+          - id: leave-docs
+            uri: lb://leave-service
+            predicates:
+              - Path=/docs/leave/v3/api-docs
+            filters:
+              - RewritePath=/docs/leave/(?<segment>.*), /$\{segment}
+          - id: employee-docs
+            uri: lb://employee-service
+            predicates:
+              - Path=/docs/employee/v3/api-docs
+            filters:
+              - RewritePath=/docs/employee/(?<segment>.*), /$\{segment}
+
+          - id: organization-docs
+            uri: lb://organization-service
+            predicates:
+              - Path=/docs/org/v3/api-docs
+            filters:
+              - RewritePath=/docs/org/(?<segment>.*), /$\{segment}
+
+          - id: employment-docs
+            uri: lb://employment-service
+            predicates:
+              - Path=/docs/employment/v3/api-docs
+            filters:
+              - RewritePath=/docs/employment/(?<segment>.*), /$\{segment}
+
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+server:
+  port: 8080
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Employee
+        url: /docs/employee/v3/api-docs
+      - name: Organization
+        url: /docs/org/v3/api-docs
+      - name: Employment
+        url: /docs/employment/v3/api-docs
+      - name: Duty
+        url: /docs/duty/v3/api-docs
+      - name: Leave
+        url: /docs/leave/v3/api-docs
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka
