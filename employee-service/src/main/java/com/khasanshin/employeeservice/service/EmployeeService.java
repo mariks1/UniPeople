@@ -4,9 +4,11 @@ import com.khasanshin.employeeservice.dto.CreateEmployeeDto;
 import com.khasanshin.employeeservice.dto.EmployeeDto;
 import com.khasanshin.employeeservice.dto.UpdateEmployeeDto;
 import com.khasanshin.employeeservice.entity.Employee;
+import com.khasanshin.employeeservice.exception.RemoteServiceUnavailableException;
 import com.khasanshin.employeeservice.feign.OrgClient;
 import com.khasanshin.employeeservice.mapper.EmployeeMapper;
 import com.khasanshin.employeeservice.repository.EmployeeRepository;
+import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
@@ -32,6 +34,9 @@ public class EmployeeService {
   private static final Sort DEFAULT_SORT =
       Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
+  public boolean exists(UUID id) {
+    return employeeRepository.existsById(id);
+  }
   @Transactional
   public EmployeeDto create(CreateEmployeeDto dto) {
     Employee employee = mapper.toEntity(dto);
@@ -147,15 +152,23 @@ public class EmployeeService {
     return mapper.toDto(e);
   }
 
-  @CircuitBreaker(name = "orgClient")
+  @CircuitBreaker(name = "orgClient", fallbackMethod = "ensureDepartmentUnavailable")
   void ensureDepartmentExists(UUID departmentId) {
-    orgClient.departmentExists(departmentId);
+    try {
+      orgClient.departmentExists(departmentId);
+    } catch (FeignException.NotFound e) {
+      throw new EntityNotFoundException("department not found: " + departmentId);
+    }
+  }
+
+  void ensureDepartmentUnavailable(UUID departmentId, Throwable cause) {
+    throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
   }
 
   @CircuitBreaker(name = "orgClient", fallbackMethod = "ignoreClearHead")
   void clearHeadByEmployee(UUID employeeId) {
     orgClient.clearHeadByEmployee(employeeId);
   }
-
+  void ignoreClearHead(UUID employeeId, Throwable cause) {}
 
 }

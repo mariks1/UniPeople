@@ -1,43 +1,14 @@
-server:
-  port: 0
 spring:
   application:
     name: duty-service
-  datasource:
-    url: jdbc:postgresql://postgres:5432/unipeople
-    username: postgres
-    password: postgres
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties.hibernate.default_schema: duty
-  flyway:
-    enabled: true
-    schemas: duty
-    locations: classpath:db/migration
+  config:
+    import: "configserver:http://config-server:8888"
   cloud:
-    openfeign:
-      circuitbreaker.enabled: true
-      client:
-        config:
-          organization-service:
-            connect-timeout: 2000
-            read-timeout: 3000
-            logger-level: basic
-          employee-service:
-            connect-timeout: 2000
-            read-timeout: 3000
-            logger-level: basic
-resilience4j:
-  circuitbreaker:
-    instances:
-      orgClient:
-        sliding-window-size: 20
-        failure-rate-threshold: 50
-      employeeClient:
-        sliding-window-size: 20
-        failure-rate-threshold: 50
-eureka:
-  client:
-    service-url:
-      defaultZone: http://eureka-server:8761/eureka
+    config:
+      request-connect-timeout: 5000
+      request-read-timeout: 15000
+      retry:
+        max-attempts: 12
+        initial-interval: 1000
+        multiplier: 1.5
+        max-interval: 5000

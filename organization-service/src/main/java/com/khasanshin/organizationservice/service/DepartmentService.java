@@ -4,11 +4,17 @@ import com.khasanshin.organizationservice.dto.CreateDepartmentDto;
 import com.khasanshin.organizationservice.dto.DepartmentDto;
 import com.khasanshin.organizationservice.dto.UpdateDepartmentDto;
 import com.khasanshin.organizationservice.entity.Department;
+import com.khasanshin.organizationservice.exception.RemoteServiceUnavailableException;
 import com.khasanshin.organizationservice.feign.EmployeeClient;
 import com.khasanshin.organizationservice.mapper.DepartmentMapper;
 import com.khasanshin.organizationservice.repository.DepartmentRepository;
 import com.khasanshin.organizationservice.repository.FacultyRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +33,19 @@ public class DepartmentService {
   private final FacultyRepository facultyRepository;
   private final EmployeeClient employeeClient;
 
+  private static final Sort DEFAULT_SORT = Sort.by(Sort.Direction.ASC, "name");
+  private static final Set<String> ALLOWED_SORT =
+          Set.of("id", "name", "code", "createdAt", "updatedAt");
+
+  private Sort sanitizeSort(Sort incoming) {
+    List<Sort.Order> safe = new ArrayList<>();
+    for (Sort.Order o : incoming) {
+      if (ALLOWED_SORT.contains(o.getProperty())) {
+        safe.add(o);
+      }
+    }
+    return safe.isEmpty() ? DEFAULT_SORT : Sort.by(safe);
+  }
 
   public DepartmentDto get(UUID id) {
     Department d =
@@ -44,7 +63,7 @@ public class DepartmentService {
     }
 
     if (dto.getHeadEmployeeId() != null) {
-      employeeClient.exists(dto.getHeadEmployeeId());
+      ensureEmployeeExists(dto.getHeadEmployeeId());
     }
 
     var e = mapper.toEntity(dto);
@@ -65,7 +84,7 @@ public class DepartmentService {
       throw new EntityNotFoundException("faculty " + dto.getFacultyId());
     }
     if (dto.getHeadEmployeeId() != null) {
-      employeeClient.exists(dto.getHeadEmployeeId());
+      ensureEmployeeExists(dto.getHeadEmployeeId());
     }
 
     mapper.updateEntity(dto, e);
@@ -91,7 +110,7 @@ public class DepartmentService {
             .findById(deptId)
             .orElseThrow(() -> new EntityNotFoundException("department not found: " + deptId));
 
-    employeeClient.exists(employeeId);
+    ensureEmployeeExists(employeeId);
     dep.setHeadEmployee(employeeId);
     return mapper.toDto(dep);
   }
@@ -106,13 +125,22 @@ public class DepartmentService {
   }
 
   public Page<DepartmentDto> findAll(Pageable pageable) {
-    Pageable sorted =
-        pageable.getSort().isSorted()
-            ? pageable
-            : PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Direction.ASC, "name"));
-    return departmentRepository.findAll(sorted).map(mapper::toDto);
+    Sort sort = sanitizeSort(pageable.getSort());
+    Pageable p = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    return departmentRepository.findAll(p).map(mapper::toDto);
   }
+
+  @CircuitBreaker(name = "employeeClient", fallbackMethod = "employeeExistsUnavailable")
+  void ensureEmployeeExists(UUID employeeId) {
+    employeeClient.exists(employeeId);
+  }
+
+  void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
+    throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
+  }
+
+  public boolean exists(UUID id) {
+    return departmentRepository.existsById(id);
+  }
+
 }

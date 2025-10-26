@@ -4,6 +4,7 @@ import com.khasanshin.dutyservice.dto.AssignDutyDto;
 import com.khasanshin.dutyservice.dto.DutyAssignmentDto;
 import com.khasanshin.dutyservice.entity.DepartmentDutyAssignment;
 import com.khasanshin.dutyservice.entity.Duty;
+import com.khasanshin.dutyservice.exception.RemoteServiceUnavailableException;
 import com.khasanshin.dutyservice.feign.EmployeeClient;
 import com.khasanshin.dutyservice.feign.OrgClient;
 import com.khasanshin.dutyservice.mapper.DutyAssignmentMapper;
@@ -81,11 +82,21 @@ public class DutyAssignmentService {
     assignmentRepo.delete(a);
   }
 
-  @CircuitBreaker(name = "orgClient")
+  @CircuitBreaker(name = "orgClient", fallbackMethod = "ensureDepartmentExistsUnavailable")
   void ensureDepartmentExists(UUID id) { orgClient.departmentExists(id); }
 
-  @CircuitBreaker(name = "employeeClient")
+  @CircuitBreaker(name = "employeeClient", fallbackMethod = "ensureEmployeeExistsUnavailable")
   void ensureEmployeeExists(UUID id)   { employeeClient.employeeExists(id); }
+
+
+  void ensureDepartmentExistsUnavailable(UUID id, Throwable cause) {
+    throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
+  }
+
+  void ensureEmployeeExistsUnavailable(UUID id, Throwable cause) {
+    throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
+  }
+
 
   void ensureDutyExists(UUID id) {
     if (!dutyRepo.existsById(id)) throw new EntityNotFoundException("duty " + id);

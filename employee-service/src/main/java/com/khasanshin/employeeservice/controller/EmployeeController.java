@@ -125,4 +125,20 @@ public class EmployeeController {
   public ResponseEntity<Object> activate(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(employeeService.activate(id));
   }
+
+  @Operation(
+          summary = "Проверить существование сотрудника",
+          description = "HEAD-запрос без тела. Возвращает 200, если сотрудник существует, иначе 404."
+  )
+  @ApiResponses({
+          @ApiResponse(responseCode = "200", description = "Сотрудник существует"),
+          @ApiResponse(responseCode = "404", description = "Сотрудник не найден")
+  })
+  @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
+  public ResponseEntity<Void> head(@PathVariable("id") UUID id) {
+    return employeeService.exists(id)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.notFound().build();
+  }
+
 }

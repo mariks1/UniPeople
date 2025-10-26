@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,7 +42,8 @@ public class DepartmentController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping
-  public ResponseEntity<Page<DepartmentDto>> findAll(Pageable pageable) {
+  public ResponseEntity<Page<DepartmentDto>> findAll(
+          @PageableDefault(sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
     Page<DepartmentDto> page = service.findAll(pageable);
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
@@ -131,5 +134,19 @@ public class DepartmentController {
     HttpHeaders headers = new HttpHeaders();
     headers.add("X-Total-Count", "0");
     return new ResponseEntity<>(Page.empty(pageable), headers, HttpStatus.NOT_IMPLEMENTED);
+  }
+  @Operation(
+          summary = "Проверить существование департамента",
+          description = "HEAD-запрос без тела. Возвращает 200, если департамент существует, иначе 404."
+  )
+  @ApiResponses({
+          @ApiResponse(responseCode = "200", description = "Департамент существует"),
+          @ApiResponse(responseCode = "404", description = "Департамент не найден")
+  })
+  @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
+  public ResponseEntity<Void> head(@PathVariable("id") UUID id) {
+    return service.exists(id)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.notFound().build();
   }
 }
