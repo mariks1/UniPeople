@@ -90,4 +90,16 @@ public class PositionController {
     positionService.delete(id);
     return ResponseEntity.noContent().build();
   }
+
+  @ApiResponses({
+          @ApiResponse(responseCode = "200", description = "Позиция существует"),
+          @ApiResponse(responseCode = "404", description = "Позиция не найдена")
+  })
+  @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
+  public ResponseEntity<Void> head(@PathVariable("id") UUID id) {
+    return positionService.exists(id)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.notFound().build();
+  }
+
 }

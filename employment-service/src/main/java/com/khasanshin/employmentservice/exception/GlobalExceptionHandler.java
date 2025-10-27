@@ -71,6 +71,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(pd);
     }
 
+    @ExceptionHandler(RemoteServiceUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleRemoteUnavailable(RemoteServiceUnavailableException ex) {
+        var pd = ProblemDetail.forStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        pd.setTitle("Upstream service unavailable");
+        pd.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(pd);
+    }
+
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnhandled(Exception ex) {
         log.error("Unhandled exception", ex);

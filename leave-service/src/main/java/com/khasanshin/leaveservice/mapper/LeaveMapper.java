@@ -21,6 +21,11 @@ public interface LeaveMapper {
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
+  @Mapping(target = "approverId", ignore = true)
+  @Mapping(
+          target = "status",
+          expression = "java(dto.isSubmit() ? LeaveRequest.Status.PENDING : LeaveRequest.Status.DRAFT)"
+  )
   LeaveRequest toEntity(CreateLeaveRequestDto dto);
 
   @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -28,5 +33,8 @@ public interface LeaveMapper {
   @Mapping(target = "status", ignore = true)
   @Mapping(target = "employeeId", ignore = true)
   @Mapping(target = "typeId", ignore = true)
+  @Mapping(target = "approverId", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
   void updateEntity(UpdateLeaveRequestDto dto, @MappingTarget LeaveRequest e);
 }

@@ -1,4 +1,4 @@
-package com.khasanshin.dutyservice.feign;
+package com.khasanshin.employmentservice.feign;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -12,5 +12,6 @@ import java.util.UUID;
 public interface EmployeeClient {
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
-    ResponseEntity<Void> employeeExists(@PathVariable("id") UUID id);
+    ResponseEntity<Void> exists(@PathVariable("id") UUID id);
+
 }

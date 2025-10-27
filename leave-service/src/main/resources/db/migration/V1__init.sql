@@ -1,7 +1,8 @@
 create schema if not exists leave;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 create table leave_type (
-                            id uuid primary key,
+                            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                             code varchar(64) not null unique,
                             name varchar(150) not null,
                             paid boolean not null default true,
@@ -9,7 +10,7 @@ create table leave_type (
 );
 
 create table leave_request (
-                               id uuid primary key,
+                               id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                                employee_id uuid not null,
                                type_id uuid not null,
                                date_from date not null,
@@ -20,6 +21,3 @@ create table leave_request (
                                created_at timestamptz,
                                updated_at timestamptz
 );
-
-create index idx_leave_request_emp on leave_request(employee_id, date_from);
-create index idx_leave_request_status on leave_request(status);

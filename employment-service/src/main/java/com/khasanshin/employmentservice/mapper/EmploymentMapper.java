@@ -15,6 +15,7 @@ public interface EmploymentMapper {
   @Mapping(target = "status", constant = "ACTIVE")
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
+  @Mapping(target = "endDate", ignore = true)
   Employment toEntity(CreateEmploymentDto dto);
 
   @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -25,5 +26,6 @@ public interface EmploymentMapper {
   @Mapping(target = "status", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
+  @Mapping(target = "startDate", ignore = true)
   void updateEntity(UpdateEmploymentDto dto, @MappingTarget Employment e);
 }

@@ -81,4 +81,9 @@ public class PositionService {
       throw new EntityNotFoundException("position not found: " + id);
     positionRepository.deleteById(id);
   }
+
+  public boolean exists(UUID id) {
+    return positionRepository.existsById(id);
+  }
+
 }

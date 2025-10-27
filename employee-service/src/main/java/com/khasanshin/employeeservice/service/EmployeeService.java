@@ -10,7 +10,6 @@ import com.khasanshin.employeeservice.mapper.EmployeeMapper;
 import com.khasanshin.employeeservice.repository.EmployeeRepository;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
