@@ -11,5 +11,5 @@ import org.springframework.data.repository.query.Param;
 public interface DepartmentRepository extends JpaRepository<Department, UUID> {
   @Modifying
   @Query("update Department d set d.headEmployee = null where d.headEmployee = :employeeId")
-  void clearHeadByEmployeeId(@Param("employeeId") UUID employeeId);
+  int clearHeadByEmployeeId(@Param("employeeId") UUID employeeId);
 }

@@ -168,6 +168,8 @@ public class EmployeeService {
   void clearHeadByEmployee(UUID employeeId) {
     orgClient.clearHeadByEmployee(employeeId);
   }
+
+
   void ignoreClearHead(UUID employeeId, Throwable cause) {}
 
 }

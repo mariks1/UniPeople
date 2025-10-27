@@ -9,6 +9,7 @@ import com.khasanshin.dutyservice.feign.OrgClient;
 import com.khasanshin.dutyservice.mapper.DutyAssignmentMapper;
 import com.khasanshin.dutyservice.repository.DutyAssignmentRepository;
 import com.khasanshin.dutyservice.repository.DutyRepository;
+import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,10 +82,28 @@ public class DutyAssignmentService {
   }
 
   @CircuitBreaker(name = "orgClient", fallbackMethod = "ensureDepartmentExistsUnavailable")
-  void ensureDepartmentExists(UUID id) { orgClient.departmentExists(id); }
+  void ensureDepartmentExists(UUID id) {
+    try {
+      ResponseEntity<Void> resp = orgClient.departmentExists(id);
+      if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
+        throw new EntityNotFoundException("department not found: " + id);
+      }
+    } catch (FeignException.NotFound e) {
+      throw new EntityNotFoundException("department not found: " + id);
+    }
+  }
 
   @CircuitBreaker(name = "employeeClient", fallbackMethod = "ensureEmployeeExistsUnavailable")
-  void ensureEmployeeExists(UUID id)   { employeeClient.employeeExists(id); }
+  void ensureEmployeeExists(UUID id)   {
+    try {
+      ResponseEntity<Void> resp = employeeClient.employeeExists(id);
+      if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
+        throw new EntityNotFoundException("employee not found: " + id);
+      }
+    } catch (FeignException.NotFound e) {
+      throw new EntityNotFoundException("employee not found: " + id);
+    }
+  }
 
 
   void ensureDepartmentExistsUnavailable(UUID id, Throwable cause) {

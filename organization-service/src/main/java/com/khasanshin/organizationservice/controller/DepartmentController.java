@@ -149,4 +149,20 @@ public class DepartmentController {
             ? ResponseEntity.ok().build()
             : ResponseEntity.notFound().build();
   }
+
+  @Operation(
+          summary = "Снять заведующего по employeeId во всех департаментах",
+          description = "Удаляет headEmployee там, где он равен заданному employeeId"
+  )
+  @ApiResponses({
+          @ApiResponse(responseCode = "204", description = "Готово")
+  })
+  @DeleteMapping("/head/by-employee/{employeeId}")
+  public ResponseEntity<Void> clearHeadByEmployee(@PathVariable("employeeId") UUID employeeId) {
+    int affected = service.clearHeadByEmployee(employeeId);
+    HttpHeaders headers = new HttpHeaders();
+    headers.add("X-Affected-Count", String.valueOf(affected));
+    return new ResponseEntity<>(headers, HttpStatus.NO_CONTENT);
+  }
+
 }

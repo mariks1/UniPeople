@@ -9,6 +9,7 @@ import com.khasanshin.organizationservice.feign.EmployeeClient;
 import com.khasanshin.organizationservice.mapper.DepartmentMapper;
 import com.khasanshin.organizationservice.repository.DepartmentRepository;
 import com.khasanshin.organizationservice.repository.FacultyRepository;
+import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -132,11 +134,23 @@ public class DepartmentService {
 
   @CircuitBreaker(name = "employeeClient", fallbackMethod = "employeeExistsUnavailable")
   void ensureEmployeeExists(UUID employeeId) {
-    employeeClient.exists(employeeId);
+    try {
+      ResponseEntity<Void> resp = employeeClient.exists(employeeId);
+      if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
+        throw new EntityNotFoundException("employeeId not found: " + employeeId);
+      }
+    } catch (FeignException.NotFound e) {
+      throw new EntityNotFoundException("employeeId not found: " + employeeId);
+    }
   }
 
   void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
     throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
+  }
+
+  @Transactional
+  public int clearHeadByEmployee(UUID employeeId) {
+    return departmentRepository.clearHeadByEmployeeId(employeeId);
   }
 
   public boolean exists(UUID id) {
