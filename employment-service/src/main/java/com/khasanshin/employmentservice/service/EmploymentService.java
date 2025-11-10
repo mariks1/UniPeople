@@ -10,7 +10,6 @@ import com.khasanshin.employmentservice.feign.EmployeeClient;
 import com.khasanshin.employmentservice.feign.OrgClient;
 import com.khasanshin.employmentservice.mapper.EmploymentMapper;
 import com.khasanshin.employmentservice.repository.EmploymentRepository;
-import feign.Feign;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
@@ -19,11 +18,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -110,21 +109,41 @@ public class EmploymentService {
           ).subscribeOn(Schedulers.boundedElastic());
   }
 
-  public Mono<Page<EmploymentDto>> listByEmployee(UUID employeeId, Pageable pageable) {
-    return Mono.fromCallable(() -> repo.findByEmployeeIdOrderByStartDateDesc(employeeId, pageable)
-                    .map(mapper::toDto))
-            .subscribeOn(Schedulers.boundedElastic());
-  }
+    public Flux<EmploymentDto> listByEmployee(UUID employeeId, int page, int size) {
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return Mono.fromCallable(() ->
+                        repo.findByEmployeeIdOrderByStartDateDesc(employeeId, pageable)
+                                .map(mapper::toDto)
+                )
+                .flatMapMany(pg -> Flux.fromIterable(pg.getContent()))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
 
-  public Mono<Page<EmploymentDto>> listByDepartment(UUID departmentId, boolean active, Pageable pageable) {
-    return Mono.fromCallable(() -> {
-              var page = active
-                      ? repo.findByDepartmentIdAndStatus(departmentId, Employment.Status.ACTIVE, pageable)
-                      : repo.findByDepartmentId(departmentId, pageable);
-              return page.map(mapper::toDto);
-            })
-            .subscribeOn(Schedulers.boundedElastic());
-  }
+    public Mono<Long> countByEmployee(UUID employeeId) {
+        return Mono.fromCallable(() -> repo.countByEmployeeId(employeeId))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    public Flux<EmploymentDto> listByDepartment(UUID departmentId, boolean active, int page, int size) {
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return Mono.fromCallable(() -> {
+                    var pg = active
+                            ? repo.findByDepartmentIdAndStatus(departmentId, Employment.Status.ACTIVE, pageable)
+                            : repo.findByDepartmentId(departmentId, pageable);
+                    return pg.map(mapper::toDto);
+                })
+                .flatMapMany(pg -> Flux.fromIterable(pg.getContent()))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    public Mono<Long> countByDepartment(UUID departmentId, boolean active) {
+        return Mono.fromCallable(() ->
+                        active
+                                ? repo.countByDepartmentIdAndStatus(departmentId, Employment.Status.ACTIVE)
+                                : repo.countByDepartmentId(departmentId)
+                )
+                .subscribeOn(Schedulers.boundedElastic());
+    }
 
   @CircuitBreaker(name = "employeeClient", fallbackMethod = "employeeExistsUnavailable")
   void ensureEmployeeExists(UUID employeeId) {
@@ -138,7 +157,7 @@ public class EmploymentService {
       }
   }
 
-  void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
+  public void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
       throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
   }
 
@@ -155,7 +174,7 @@ public class EmploymentService {
       }
   }
 
-  void departmentExistsUnavailable(UUID departmentId, Throwable cause) {
+  public void departmentExistsUnavailable(UUID departmentId, Throwable cause) {
       throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
   }
 
@@ -171,7 +190,7 @@ public class EmploymentService {
       }
   }
 
-  void positionExistsUnavailable(UUID positionId, Throwable cause) {
+  public void positionExistsUnavailable(UUID positionId, Throwable cause) {
       throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
   }
 }

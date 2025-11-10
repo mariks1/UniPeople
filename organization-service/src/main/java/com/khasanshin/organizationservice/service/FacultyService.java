@@ -53,4 +53,16 @@ public class FacultyService {
     mapper.updateEntity(dto, e);
     return mapper.toDto(e);
   }
+
+  @Transactional
+  public void delete(UUID id) {
+    Faculty dep =
+            repo
+                    .findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("department not found: " + id));
+
+    repo.delete(dep);
+  }
+
+
 }

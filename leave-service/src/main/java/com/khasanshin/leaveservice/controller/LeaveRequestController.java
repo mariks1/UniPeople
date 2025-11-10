@@ -15,10 +15,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -32,8 +33,8 @@ public class LeaveRequestController {
   @Operation(summary = "Получить заявку на отпуск по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
-  public Mono<ResponseEntity<LeaveRequestDto>> get(@PathVariable("id") UUID id) {
-    return service.get(id).map(ResponseEntity::ok);
+  public Mono<LeaveRequestDto> get(@PathVariable("id") UUID id) {
+    return service.get(id);
   }
 
   @Operation(summary = "Создать заявку на отпуск")
@@ -43,8 +44,8 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404", description = "Тип не найден")
   })
   @PostMapping
-  public Mono<ResponseEntity<LeaveRequestDto>> create(@Valid @RequestBody CreateLeaveRequestDto body) {
-    return service.create(body).map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
+  public Mono<LeaveRequestDto> create(@Valid @RequestBody CreateLeaveRequestDto body) {
+    return service.create(body);
   }
 
   @Operation(summary = "Обновить заявку (DRAFT/PENDING)")
@@ -66,9 +67,9 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404")
   })
   @PostMapping("/{id}/approve")
-  public Mono<ResponseEntity<LeaveRequestDto>> approve(
+  public Mono<LeaveRequestDto> approve(
       @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
-    return service.approve(id, body).map(ResponseEntity::ok);
+    return service.approve(id, body);
   }
 
   @Operation(summary = "Отклонить заявку")
@@ -78,9 +79,9 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404")
   })
   @PostMapping("/{id}/reject")
-  public Mono<ResponseEntity<LeaveRequestDto>> reject(
+  public Mono<LeaveRequestDto> reject(
       @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
-    return service.reject(id, body).map(ResponseEntity::ok);
+    return service.reject(id, body);
   }
 
   @Operation(summary = "Отменить заявку (PENDING/APPROVED)")
@@ -90,8 +91,8 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404")
   })
   @PostMapping("/{id}/cancel")
-  public Mono<ResponseEntity<LeaveRequestDto>> cancel(@PathVariable("id") UUID id) {
-    return service.cancel(id).map(ResponseEntity::ok);
+  public Mono<LeaveRequestDto> cancel(@PathVariable("id") UUID id) {
+    return service.cancel(id);
   }
 
   @Operation(summary = "Заявки сотрудника (пагинация)")
@@ -103,14 +104,12 @@ public class LeaveRequestController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
-  public Mono<ResponseEntity<Page<LeaveRequestDto>>> byEmployee(
-      @PathVariable("employeeId") UUID employeeId, Pageable p) {
-    return service.listByEmployee(employeeId, p)
-            .map(page -> {
-              var h = new HttpHeaders();
-              h.add("X-Total-Count", String.valueOf(page.getTotalElements()));
-              return new ResponseEntity<>(page, h, HttpStatus.OK);
-            });
+  public Flux<LeaveRequestDto> byEmployee(
+          @PathVariable("employeeId") UUID employeeId, Pageable p, ServerHttpResponse response) {
+    return service.countLeaveByEmployee(employeeId)
+            .doOnNext(total ->
+                    response.getHeaders().add("X-Total-Count", String.valueOf(total)))
+            .thenMany(service.listByEmployee(employeeId, p));
   }
 
   @Operation(summary = "Заявки по статусу (пагинация)")
@@ -122,13 +121,11 @@ public class LeaveRequestController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping
-  public Mono<ResponseEntity<Page<LeaveRequestDto>>> byStatus(
-          @RequestParam("status") LeaveRequest.Status status, Pageable p) {
-    return service.listByStatus(status, p)
-            .map(page -> {
-              var h = new HttpHeaders();
-              h.add("X-Total-Count", String.valueOf(page.getTotalElements()));
-              return new ResponseEntity<>(page, h, HttpStatus.OK);
-            });
+  public Flux<LeaveRequestDto> byStatus(
+          @RequestParam("status") LeaveRequest.Status status, Pageable p, ServerHttpResponse response) {
+    return service.countLeaveByStatus(status)
+            .doOnNext(total ->
+                    response.getHeaders().add("X-Total-Count", String.valueOf(total)))
+            .thenMany(service.listByStatus(status, p));
   }
 }

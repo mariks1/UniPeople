@@ -13,14 +13,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -36,8 +37,8 @@ public class EmploymentController {
   @Operation(summary = "Получить назначение по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
-  public Mono<ResponseEntity<EmploymentDto>> get(@PathVariable("id") UUID id) {
-    return employmentService.get(id).map(ResponseEntity::ok);
+  public Mono<EmploymentDto> get(@PathVariable("id") UUID id) {
+      return employmentService.get(id);
   }
 
   @Operation(summary = "Создать назначение (приём/перевод)")
@@ -47,25 +48,25 @@ public class EmploymentController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности/целостности")
   })
   @PostMapping
-  public Mono<ResponseEntity<EmploymentDto>> create(@Valid @RequestBody CreateEmploymentDto body) {
-    return employmentService.create(body)
-            .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
+  @ResponseStatus(HttpStatus.CREATED)
+  public Mono<EmploymentDto> create(@Valid @RequestBody CreateEmploymentDto body) { // TODO
+      return employmentService.create(body);
   }
 
   @Operation(summary = "Обновить назначение (ставка/оклад/дата окончания)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
-  public Mono<ResponseEntity<EmploymentDto>> update(
+  public Mono<EmploymentDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateEmploymentDto body) {
-    return employmentService.update(id, body).map(ResponseEntity::ok);
+      return employmentService.update(id, body);
   }
 
   @Operation(summary = "Закрыть назначение (endDate, status=CLOSED)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/close")
-  public Mono<ResponseEntity<EmploymentDto>> close(
+  public Mono<EmploymentDto> close(
       @PathVariable("id") UUID id, @Valid @RequestBody(required = false) CloseEmploymentDto body) {
-    return employmentService.close(id, body).map(ResponseEntity::ok);
+      return employmentService.close(id, body);
   }
 
   @Operation(summary = "История назначений сотрудника (пагинация)")
@@ -77,15 +78,21 @@ public class EmploymentController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
-  public Mono<ResponseEntity<Page<EmploymentDto>>> listByEmployee(
-      @PathVariable("employeeId") UUID employeeId, Pageable pageable) {
-    return employmentService
-            .listByEmployee(employeeId, pageable)
-            .map(page -> {
-              HttpHeaders headers = new HttpHeaders();
-              headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
-              return new ResponseEntity<>(page, headers, HttpStatus.OK);
-            });
+  public Flux<EmploymentDto> listByEmployee(
+          @PathVariable("employeeId") UUID employeeId,
+          @RequestParam(name = "page", defaultValue = "0") int page,
+          @RequestParam(name = "size", defaultValue = "20") int size,
+          ServerHttpResponse response) {
+
+      int p = Math.max(page, 0);
+      int s = Math.min(Math.max(size, 1), 200);
+      response.beforeCommit(() ->
+              employmentService.countByEmployee(employeeId)
+                      .doOnNext(total -> response.getHeaders().set("X-Total-Count", String.valueOf(total)))
+                      .then()
+      );
+
+      return employmentService.listByEmployee(employeeId, p, s);
   }
 
   @Operation(summary = "Назначения по департаменту (active=true по умолчанию)")
@@ -99,16 +106,21 @@ public class EmploymentController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/by-department/{departmentId}")
-  public Mono<ResponseEntity<Page<EmploymentDto>>> listByDepartment(
-      @PathVariable("departmentId") UUID departmentId,
-      @RequestParam(required = false, defaultValue = "true", value = "active") boolean active,
-      Pageable pageable) {
-    return employmentService
-            .listByDepartment(departmentId, active, pageable)
-            .map(page -> {
-              HttpHeaders headers = new HttpHeaders();
-              headers.add("X-Total-Count", String.valueOf(page.getTotalElements()));
-              return new ResponseEntity<>(page, headers, HttpStatus.OK);
-            });
+  public Flux<EmploymentDto> listByDepartment(
+          @PathVariable("departmentId") UUID departmentId,
+          @RequestParam(name = "active", defaultValue = "true") boolean active,
+          @RequestParam(name = "page", defaultValue = "0") int page,
+          @RequestParam(name = "size", defaultValue = "20") int size,
+          ServerHttpResponse response) {
+
+      int p = Math.max(page, 0);
+      int s = Math.min(Math.max(size, 1), 200);
+      response.beforeCommit(() ->
+              employmentService.countByDepartment(departmentId, active)
+                      .doOnNext(total -> response.getHeaders().set("X-Total-Count", String.valueOf(total)))
+                      .then()
+      );
+
+      return employmentService.listByDepartment(departmentId, active, p, s);
   }
 }

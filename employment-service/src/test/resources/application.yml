@@ -1,0 +1,11 @@
+spring:
+  config:
+    import: "optional:"   # глушим любые импорты, в т.ч. configserver
+  cloud:
+    config:
+      enabled: false
+    bootstrap:
+      enabled: false
+eureka:
+  client:
+    enabled: false

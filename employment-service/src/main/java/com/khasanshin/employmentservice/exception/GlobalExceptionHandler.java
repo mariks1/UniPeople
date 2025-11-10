@@ -6,9 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ServerWebInputException;
+import org.springframework.web.server.UnsupportedMediaTypeStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -79,6 +81,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(pd);
     }
 
+    @ExceptionHandler({UnsupportedMediaTypeStatusException.class})
+    public ResponseEntity<ProblemDetail> handleUnsupportedMediaType(Exception ex) {
+        var pd = ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        pd.setTitle("Unsupported media type");
+        pd.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(pd);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnhandled(Exception ex) {

@@ -1,15 +1,16 @@
 package com.khasanshin.leaveservice.exception;
 
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 
@@ -21,65 +22,80 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ProblemDetail> handleBadRequest(IllegalArgumentException ex) {
-        var pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        pd.setTitle("Invalid request");
-        pd.setDetail(ex.getMessage());
-        return ResponseEntity.badRequest().body(pd);
+    public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
+        return pd(HttpStatus.BAD_REQUEST, "Invalid request", ex.getMessage());
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class})
-    public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException ex) {
-        var pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        pd.setTitle("Validation failed");
+    @ExceptionHandler(IllegalStateException.class)
+    public ProblemDetail handleIllegalState(IllegalStateException ex) {
+        return pd(HttpStatus.BAD_REQUEST, "Business rule violation", ex.getMessage());
+    }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ProblemDetail handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        var pd = pd(HttpStatus.BAD_REQUEST, "Validation failed",
+                "Request body contains invalid fields");
         Map<String, String> errors = new HashMap<>();
-        for (var e : ex.getBindingResult().getAllErrors()) {
-            String field = e instanceof FieldError fe ? fe.getField() : e.getObjectName();
-            errors.put(field, e.getDefaultMessage());
-        }
+        ex.getBindingResult().getAllErrors().forEach(err -> {
+            String field = (err instanceof FieldError fe) ? fe.getField() : err.getObjectName();
+            errors.put(field, err.getDefaultMessage());
+        });
         pd.setProperty("errors", errors);
-        return ResponseEntity.badRequest().body(pd);
+        return pd;
     }
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ProblemDetail> handleConstraintViolation(ConstraintViolationException ex) {
-        var pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        pd.setTitle("Constraint violation");
-        pd.setDetail(ex.getMessage());
-        return ResponseEntity.badRequest().body(pd);
-    }
-
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ProblemDetail> handleConflict(DataIntegrityViolationException ignoredEx) {
-        var pd = ProblemDetail.forStatus(HttpStatus.CONFLICT);
-        pd.setTitle("Integrity constraint violation");
-        pd.setDetail("Unique/foreign key constraint failed");
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(pd);
-    }
-
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ProblemDetail> handleResponseStatus(ResponseStatusException ex) {
-        var pd = ProblemDetail.forStatus(ex.getStatusCode());
-        pd.setTitle(ex.getStatusCode().toString());
-        pd.setDetail(ex.getReason());
-        return ResponseEntity.status(ex.getStatusCode()).body(pd);
+    @ExceptionHandler(WebExchangeBindException.class)
+    public ProblemDetail handleWebExchangeBind(WebExchangeBindException ex) {
+        var pd = pd(HttpStatus.BAD_REQUEST, "Validation failed",
+                "Request parameters contain invalid values");
+        Map<String, String> errors = new HashMap<>();
+        ex.getFieldErrors().forEach(fe -> errors.put(fe.getField(), fe.getDefaultMessage()));
+        ex.getGlobalErrors().forEach(ge -> errors.put(ge.getObjectName(), ge.getDefaultMessage()));
+        pd.setProperty("errors", errors);
+        return pd;
     }
 
     @ExceptionHandler(ServerWebInputException.class)
-    public ResponseEntity<ProblemDetail> handleWebInput(ServerWebInputException ex) {
-        var pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        pd.setTitle("Malformed request");
+    public ProblemDetail handleServerWebInput(ServerWebInputException ex) {
+        return pd(HttpStatus.BAD_REQUEST, "Malformed request",
+                ex.getReason() != null ? ex.getReason() : "Failed to read/convert request");
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
+        var pd = pd(HttpStatus.BAD_REQUEST, "Constraint violation", "One or more constraints failed");
+        Map<String, String> violations = new HashMap<>();
+        for (ConstraintViolation<?> v : ex.getConstraintViolations()) {
+            violations.put(v.getPropertyPath().toString(), v.getMessage());
+        }
+        pd.setProperty("errors", violations);
+        return pd;
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
+        return pd(HttpStatus.CONFLICT, "Integrity constraint violation",
+                "Unique/foreign key constraint failed");
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ProblemDetail handleResponseStatus(ResponseStatusException ex) {
+        var pd = ProblemDetail.forStatus(ex.getStatusCode());
+        pd.setTitle(ex.getStatusCode().toString());
         pd.setDetail(ex.getReason());
-        return ResponseEntity.badRequest().body(pd);
+        return pd;
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleUnhandled(Exception ex) {
+    public ProblemDetail handleUnhandled(Exception ex) {
         log.error("Unhandled exception", ex);
-        var pd = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        pd.setTitle("Internal error");
-        pd.setDetail("Unexpected error occurred");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(pd);
+        return pd(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error", "Unexpected error occurred");
+    }
+
+    private static ProblemDetail pd(HttpStatus status, String title, String detail) {
+        var pd = ProblemDetail.forStatus(status);
+        pd.setTitle(title);
+        pd.setDetail(detail);
+        return pd;
     }
 }

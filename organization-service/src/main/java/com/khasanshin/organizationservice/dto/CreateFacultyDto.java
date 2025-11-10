@@ -1,5 +1,6 @@
 package com.khasanshin.organizationservice.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
@@ -11,11 +12,11 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class CreateFacultyDto {
 
-  @NotNull
+  @NotBlank
   @Size(max = 255)
   String name;
 
-  @NotNull
+  @NotBlank
   @Size(max = 64)
   String code;
 }

@@ -144,7 +144,7 @@ public class DepartmentService {
     }
   }
 
-  void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
+  public void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
     throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
   }
 

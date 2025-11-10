@@ -12,6 +12,6 @@ public interface OrgClient {
     @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
     void departmentExists(@PathVariable("id") UUID id);
 
-    @DeleteMapping("/departments/head/by-employee/{employeeId}") // TODO
+    @DeleteMapping("/departments/head/by-employee/{employeeId}")
     void clearHeadByEmployee(@PathVariable("employeeId") UUID employeeId);
 }

@@ -35,4 +35,9 @@ public interface EmploymentRepository extends JpaRepository<Employment, UUID> {
       @Param("pos") UUID positionId,
       @Param("startDate") LocalDate start,
       @Param("endDate") LocalDate end);
+
+  long countByEmployeeId(UUID employeeId);
+  long countByDepartmentId(UUID departmentId);
+  long countByDepartmentIdAndStatus(UUID departmentId, Employment.Status status);
+
 }

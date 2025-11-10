@@ -106,11 +106,11 @@ public class DutyAssignmentService {
   }
 
 
-  void ensureDepartmentExistsUnavailable(UUID id, Throwable cause) {
+  public void ensureDepartmentExistsUnavailable(UUID id, Throwable cause) {
     throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
   }
 
-  void ensureEmployeeExistsUnavailable(UUID id, Throwable cause) {
+  public void ensureEmployeeExistsUnavailable(UUID id, Throwable cause) {
     throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
   }
 

@@ -160,16 +160,16 @@ public class EmployeeService {
     }
   }
 
-  void ensureDepartmentUnavailable(UUID departmentId, Throwable cause) {
+  public void ensureDepartmentUnavailable(UUID departmentId, Throwable cause) {
     throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
   }
 
   @CircuitBreaker(name = "orgClient", fallbackMethod = "ignoreClearHead")
-  void clearHeadByEmployee(UUID employeeId) {
+  public void clearHeadByEmployee(UUID employeeId) {
     orgClient.clearHeadByEmployee(employeeId);
   }
 
 
-  void ignoreClearHead(UUID employeeId, Throwable cause) {}
+  public void ignoreClearHead(UUID employeeId, Throwable cause) {}
 
 }

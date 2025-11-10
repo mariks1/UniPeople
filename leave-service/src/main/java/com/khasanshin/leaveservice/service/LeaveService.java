@@ -2,20 +2,25 @@ package com.khasanshin.leaveservice.service;
 
 import com.khasanshin.leaveservice.dto.*;
 import com.khasanshin.leaveservice.entity.LeaveRequest;
+import com.khasanshin.leaveservice.entity.LeaveType;
 import com.khasanshin.leaveservice.mapper.LeaveMapper;
 import com.khasanshin.leaveservice.repository.LeaveRequestRepository;
 import com.khasanshin.leaveservice.repository.LeaveTypeRepository;
 
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -26,13 +31,18 @@ public class LeaveService {
   private final LeaveRequestRepository leaveRequestRepository;
   private final LeaveMapper leaveMapper;
 
-  public Mono<Page<LeaveTypeDto>> listTypes(Pageable p) {
-    Mono<Long> total = leaveTypeRepository.count();
-    Mono<java.util.List<LeaveTypeDto>> list =
-            leaveTypeRepository.findAllBy(p).map(leaveMapper::toDto).collectList();
-    return Mono.zip(list, total).map(t -> new PageImpl<>(t.getT1(), p, t.getT2()));
+  public Mono<Long> countTypes() {
+      return leaveTypeRepository.count();
   }
 
+    public Flux<LeaveTypeDto> listTypes(Pageable p) {
+        Pageable capped = PageRequest.of(
+                Math.max(0, p.getPageNumber()),
+                Math.min(p.getPageSize(), 50),
+                p.getSort()
+        );
+        return leaveTypeRepository.findAllBy(capped).map(leaveMapper::toDto);
+    }
   @Transactional
   public Mono<LeaveTypeDto> createType(CreateLeaveTypeDto dto) {
     return leaveTypeRepository.existsByCodeIgnoreCase(dto.getCode())
@@ -59,135 +69,152 @@ public class LeaveService {
   }
 
   public Mono<LeaveRequestDto> get(UUID id) {
-    return leaveRequestRepository.findById(id)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "type not found")))
-            .map(leaveMapper::toDto);
+      return getLeaveOr404(id).map(leaveMapper::toDto);
   }
 
   @Transactional
-  public Mono<LeaveRequestDto> create(CreateLeaveRequestDto dto) {
-    if (dto.getDateTo().isBefore(dto.getDateFrom()))
-      return Mono.error(new IllegalArgumentException("dateTo < dateFrom"));
+  public Mono<LeaveRequestDto> create(CreateLeaveRequestDto dto) { // TODO облегчить
+      validateDateOrder(dto.getDateFrom(), dto.getDateTo());
 
-    return leaveTypeRepository.findById(dto.getTypeId())
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "type not found")))
-            .then(leaveRequestRepository.existsOverlaps(dto.getEmployeeId(), dto.getDateFrom(), dto.getDateTo()))
-            .flatMap(over -> over
-                    ? Mono.error(new IllegalStateException("overlapping leave exists"))
-                    : Mono.just(dto))
-            .flatMap(d -> {
-              if (d.isSubmit()) {
-                int year = d.getDateFrom().getYear();
-                int requested = (int) (ChronoUnit.DAYS.between(d.getDateFrom(), d.getDateTo()) + 1);
-                return leaveRequestRepository.sumApprovedDaysForYear(d.getEmployeeId(), d.getTypeId(), year)
-                        .flatMap(approved -> leaveTypeRepository.findById(d.getTypeId())
-                                .flatMap(type -> {
-                                  Integer limit = type.getMaxDaysPerYear();
-                                  if (limit != null && approved + requested > limit) {
-                                    return Mono.error(new IllegalStateException("yearly limit exceeded"));
-                                  }
-                                  return Mono.just(d);
-                                }));
-              }
-              return Mono.just(d);
-            })
-            .map(leaveMapper::toEntity)
-            .flatMap(leaveRequestRepository::save)
-            .map(leaveMapper::toDto);
+      Mono<LeaveType> typeMono = getTypeOr404(dto.getTypeId()).cache();
+      Mono<Void> overlaps = requireNoOverlaps(dto.getEmployeeId(), dto.getDateFrom(), dto.getDateTo());
 
+      int year = dto.getDateFrom().getYear();
+      int requested = requestedDays(dto.getDateFrom(), dto.getDateTo());
+      Mono<Void> limitCheck = dto.isSubmit()
+              ? typeMono.flatMap(type -> ensureWithinYearLimit(dto.getEmployeeId(), type, year, requested))
+              : Mono.empty();
+
+      return Mono.when(typeMono.then(), overlaps, limitCheck)
+              .then(Mono.fromSupplier(() -> leaveMapper.toEntity(dto)))
+              .flatMap(leaveRequestRepository::save)
+              .map(leaveMapper::toDto);
   }
 
   @Transactional
   public Mono<LeaveRequestDto> update(UUID id, UpdateLeaveRequestDto dto) {
-    return leaveRequestRepository.findById(id)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "leave request not found")))
-            .flatMap(e -> {
-              if (e.getStatus() != LeaveRequest.Status.DRAFT && e.getStatus() != LeaveRequest.Status.PENDING)
-                return Mono.error(new IllegalStateException("only DRAFT/PENDING can be updated"));
-
-              leaveMapper.updateEntity(dto, e);
-              if (e.getDateTo().isBefore(e.getDateFrom()))
-                return Mono.error(new IllegalArgumentException("dateTo < dateFrom"));
-
-              return leaveRequestRepository.existsOverlapsExcluding(e.getId(), e.getEmployeeId(), e.getDateFrom(), e.getDateTo())
-                      .flatMap(over -> over
-                              ? Mono.error(new IllegalStateException("overlapping leave exists"))
-                              : leaveRequestRepository.save(e));
-            })
-            .map(leaveMapper::toDto);
+      return getLeaveOr404(id)
+              .flatMap(e -> requireStatus(e, "only DRAFT/PENDING can be updated",
+                      LeaveRequest.Status.DRAFT, LeaveRequest.Status.PENDING))
+              .flatMap(e -> {
+                  leaveMapper.updateEntity(dto, e);
+                  validateDateOrder(e.getDateFrom(), e.getDateTo());
+                  return requireNoOverlapsExcluding(e.getId(), e.getEmployeeId(), e.getDateFrom(), e.getDateTo())
+                          .then(leaveRequestRepository.save(e));
+              })
+              .map(leaveMapper::toDto);
   }
 
   @Transactional
   public Mono<LeaveRequestDto> approve(UUID id, DecisionDto d) {
-    return leaveRequestRepository.findById(id)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "leave request not found")))
-            .flatMap(e -> {
-              if (e.getStatus() != LeaveRequest.Status.PENDING)
-                return Mono.error(new IllegalStateException("not PENDING"));
+      return getLeaveOr404(id)
+              .flatMap(e -> requireStatus(e, "not PENDING", LeaveRequest.Status.PENDING))
+              .flatMap(e -> {
+                  int year = e.getDateFrom().getYear();
+                  int requested = requestedDays(e.getDateFrom(), e.getDateTo());
 
-              int year = e.getDateFrom().getYear();
-              int requested = (int) (java.time.temporal.ChronoUnit.DAYS.between(e.getDateFrom(), e.getDateTo()) + 1);
+                  Mono<Void> limitCheck = getTypeOr404(e.getTypeId())
+                          .flatMap(type -> ensureWithinYearLimit(e.getEmployeeId(), type, year, requested));
 
-              return leaveTypeRepository.findById(e.getTypeId())
-                      .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "leave request not found")))
-                      .flatMap(type -> {
-                        Integer limit = type.getMaxDaysPerYear();
-                        if (limit == null) return Mono.just(type);
-                        return leaveRequestRepository.sumApprovedDaysForYear(e.getEmployeeId(), e.getTypeId(), year)
-                                .flatMap(approved -> (approved + requested > limit)
-                                        ? Mono.error(new IllegalStateException("yearly limit exceeded"))
-                                        : Mono.just(type));
-                      })
-                      .flatMap(type -> {
-                        e.setApproverId(d.getApproverId());
-                        if (d.getComment() != null) e.setComment(d.getComment());
-                        e.setStatus(LeaveRequest.Status.APPROVED);
-                        return leaveRequestRepository.save(e);
-                      });
-            })
-            .map(leaveMapper::toDto);
+                  return limitCheck.then(Mono.defer(() -> {
+                      e.setApproverId(d.getApproverId());
+                      if (Objects.nonNull(d.getComment())) e.setComment(d.getComment());
+                      e.setStatus(LeaveRequest.Status.APPROVED);
+                      return leaveRequestRepository.save(e);
+                  }));
+              })
+              .map(leaveMapper::toDto);
   }
 
   @Transactional
   public Mono<LeaveRequestDto> reject(UUID id, DecisionDto d) {
-    return leaveRequestRepository.findById(id)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "leave request not found")))
-            .flatMap(e -> {
-              if (e.getStatus() != LeaveRequest.Status.PENDING)
-                return Mono.error(new IllegalStateException("not PENDING"));
-              e.setApproverId(d.getApproverId());
-              if (d.getComment() != null) e.setComment(d.getComment());
-              e.setStatus(LeaveRequest.Status.REJECTED);
-              return leaveRequestRepository.save(e);
-            })
-            .map(leaveMapper::toDto);
+      return getLeaveOr404(id)
+              .flatMap(e -> requireStatus(e, "not PENDING", LeaveRequest.Status.PENDING))
+              .flatMap(e -> {
+                  e.setApproverId(d.getApproverId());
+                  if (Objects.nonNull(d.getComment())) e.setComment(d.getComment());
+                  e.setStatus(LeaveRequest.Status.REJECTED);
+                  return leaveRequestRepository.save(e);
+              })
+              .map(leaveMapper::toDto);
   }
 
   @Transactional
   public Mono<LeaveRequestDto> cancel(UUID id) {
-    return leaveRequestRepository.findById(id)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "leave request not found")))
-            .flatMap(e -> {
-              if (e.getStatus() == LeaveRequest.Status.APPROVED || e.getStatus() == LeaveRequest.Status.PENDING) {
-                e.setStatus(LeaveRequest.Status.CANCELED);
-                return leaveRequestRepository.save(e);
-              }
-              return Mono.error(new IllegalStateException("only PENDING/APPROVED can be canceled"));
-            })
-            .map(leaveMapper::toDto);
+      return getLeaveOr404(id)
+              .flatMap(e -> requireStatus(e, "only PENDING/APPROVED can be canceled",
+                      LeaveRequest.Status.PENDING, LeaveRequest.Status.APPROVED))
+              .flatMap(e -> {
+                  e.setStatus(LeaveRequest.Status.CANCELED);
+                  return leaveRequestRepository.save(e);
+              })
+              .map(leaveMapper::toDto);
   }
 
-  public Mono<Page<LeaveRequestDto>> listByEmployee(UUID empId, Pageable p) {
-    Mono<Long> total = leaveRequestRepository.countByEmployeeId(empId);
-    Mono<java.util.List<LeaveRequestDto>> list =
-            leaveRequestRepository.findByEmployeeIdOrderByDateFromDesc(empId, p).map(leaveMapper::toDto).collectList();
-    return Mono.zip(list, total).map(t -> new PageImpl<>(t.getT1(), p, t.getT2()));
+  public Mono<Long> countLeaveByEmployee(UUID empId) {
+      return leaveRequestRepository.countByEmployeeId(empId);
   }
 
-  public Mono<Page<LeaveRequestDto>> listByStatus(LeaveRequest.Status status, Pageable p) {
-    Mono<Long> total = leaveRequestRepository.countByStatus(status);
-    Mono<java.util.List<LeaveRequestDto>> list =
-            leaveRequestRepository.findByStatus(status, p).map(leaveMapper::toDto).collectList();
-    return Mono.zip(list, total).map(t -> new PageImpl<>(t.getT1(), p, t.getT2()));
+  public Flux<LeaveRequestDto> listByEmployee(UUID empId, Pageable p) {
+      return leaveRequestRepository
+              .findByEmployeeIdOrderByDateFromDesc(empId, p)
+              .map(leaveMapper::toDto);
   }
+
+  public Mono<Long> countLeaveByStatus(LeaveRequest.Status status) {
+      return leaveRequestRepository.countByStatus(status);
+  }
+
+  public Flux<LeaveRequestDto> listByStatus(LeaveRequest.Status status, Pageable p) {
+      return leaveRequestRepository.findByStatus(status, p).map(leaveMapper::toDto);
+  }
+
+    private Mono<LeaveType> getTypeOr404(UUID typeId) {
+        return leaveTypeRepository.findById(typeId).switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "type not found")));
+    }
+
+    private Mono<LeaveRequest> getLeaveOr404(UUID id) {
+        return leaveRequestRepository.findById(id).switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "leave request not found")));
+    }
+
+    private void validateDateOrder(LocalDate from, LocalDate to) {
+        if (to.isBefore(from)) throw new IllegalArgumentException("dateTo < dateFrom");
+    }
+
+    private int requestedDays(LocalDate from, LocalDate to) {
+        return (int) (ChronoUnit.DAYS.between(from, to) + 1);
+    }
+
+    private Mono<Void> requireNoOverlaps(UUID employeeId, LocalDate from, LocalDate to) {
+        return leaveRequestRepository.existsOverlaps(employeeId, from, to)
+                .flatMap(over -> over
+                        ? Mono.error(new IllegalStateException("overlapping leave exists"))
+                        : Mono.empty());
+    }
+
+    private Mono<Void> requireNoOverlapsExcluding(UUID id, UUID employeeId, LocalDate from, LocalDate to) {
+        return leaveRequestRepository.existsOverlapsExcluding(id, employeeId, from, to)
+                .flatMap(over -> over
+                        ? Mono.error(new IllegalStateException("overlapping leave exists"))
+                        : Mono.empty());
+    }
+
+    private Mono<LeaveRequest> requireStatus(LeaveRequest e, String onErrorMessage, LeaveRequest.Status... allowed) {
+        EnumSet<LeaveRequest.Status> set = EnumSet.noneOf(LeaveRequest.Status.class);
+        Collections.addAll(set, allowed);
+        return set.contains(e.getStatus())
+                ? Mono.just(e)
+                : Mono.error(new IllegalStateException(onErrorMessage));
+    }
+
+    private Mono<Void> ensureWithinYearLimit(UUID employeeId, LeaveType type, int year, int requested) {
+        Integer limit = type.getMaxDaysPerYear();
+        if (limit == null) return Mono.empty();
+
+        return leaveRequestRepository
+                .sumApprovedDaysForYear(employeeId, type.getId(), year)
+                .flatMap(approved -> (approved + requested > limit)
+                        ? Mono.error(new IllegalStateException("yearly limit exceeded"))
+                        : Mono.empty());
+    }
 }

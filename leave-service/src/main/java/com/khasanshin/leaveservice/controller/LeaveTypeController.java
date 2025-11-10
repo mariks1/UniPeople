@@ -13,10 +13,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.*;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -38,13 +41,13 @@ public class LeaveTypeController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping
-  public Mono<ResponseEntity<Page<LeaveTypeDto>>> list(Pageable p) {
-    return service.listTypes(p)
-            .map(page -> {
-              var h = new HttpHeaders();
-              h.add("X-Total-Count", String.valueOf(page.getTotalElements()));
-              return new ResponseEntity<>(page, h, HttpStatus.OK);
-            });
+  public Flux<LeaveTypeDto> list(
+          @ParameterObject
+          @PageableDefault(size = 20, sort = "code", direction = Sort.Direction.ASC) Pageable p,
+          ServerHttpResponse response) {
+    return service.countTypes()
+            .doOnNext(total -> response.getHeaders().set("X-Total-Count", String.valueOf(total)))
+            .thenMany(service.listTypes(p));
   }
 
   @Operation(summary = "Создать тип отпуска")
@@ -53,16 +56,16 @@ public class LeaveTypeController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
-  public Mono<ResponseEntity<LeaveTypeDto>> create(@Valid @RequestBody CreateLeaveTypeDto body) {
-    return service.createType(body).map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
+  public Mono<LeaveTypeDto> create(@Valid @RequestBody CreateLeaveTypeDto body) {
+    return service.createType(body);
   }
 
   @Operation(summary = "Обновить тип отпуска")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PatchMapping("/{id}")
-  public Mono<ResponseEntity<LeaveTypeDto>> update(
+  public Mono<LeaveTypeDto> update(
           @PathVariable("id") UUID id, @Valid @RequestBody UpdateLeaveTypeDto body) {
-    return service.updateType(id, body).map(ResponseEntity::ok);
+    return service.updateType(id, body);
   }
 
   @Operation(summary = "Удалить тип отпуска")
@@ -72,7 +75,7 @@ public class LeaveTypeController {
     @ApiResponse(responseCode = "409", description = "Есть связанные заявки")
   })
   @DeleteMapping("/{id}")
-  public Mono<ResponseEntity<Void>> delete(@PathVariable("id") UUID id) {
-    return service.deleteType(id).thenReturn(ResponseEntity.noContent().build());
+  public Mono<Void> delete(@PathVariable("id") UUID id) {
+    return service.deleteType(id);
   }
 }

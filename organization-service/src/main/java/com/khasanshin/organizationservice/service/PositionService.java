@@ -7,6 +7,10 @@ import com.khasanshin.organizationservice.entity.Position;
 import com.khasanshin.organizationservice.mapper.PositionMapper;
 import com.khasanshin.organizationservice.repository.PositionRepository;
 import jakarta.persistence.EntityNotFoundException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,19 +28,30 @@ public class PositionService {
   private final PositionRepository positionRepository;
   private final PositionMapper positionMapper;
 
+  private static final Sort DEFAULT_SORT = Sort.by(Sort.Direction.ASC, "name");
+  private static final Set<String> ALLOWED_SORT =
+          Set.of("id", "name", "createdAt", "updatedAt");
+
+  @Transactional(readOnly = true)
   public Page<PositionDto> findAll(String q, Pageable pageable) {
-    Pageable sorted =
-        pageable.getSort().isSorted()
-            ? pageable
-            : PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.by(Sort.Direction.ASC, "name"));
-    Page<Position> page =
-        (q == null || q.isBlank())
-            ? positionRepository.findAll(sorted)
-            : positionRepository.findByNameContainingIgnoreCase(q.trim(), sorted);
+    Sort sort = sanitizeSort(pageable.getSort());
+    Pageable p = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+    Page<Position> page = (q == null || q.isBlank())
+            ? positionRepository.findAll(p)
+            : positionRepository.findByNameContainingIgnoreCase(q.trim(), p);
+
     return page.map(positionMapper::toDto);
+  }
+
+  private Sort sanitizeSort(Sort incoming) {
+    List<Sort.Order> safe = new ArrayList<>();
+    for (Sort.Order o : incoming) {
+      if (ALLOWED_SORT.contains(o.getProperty())) {
+        safe.add(o);
+      }
+    }
+    return safe.isEmpty() ? DEFAULT_SORT : Sort.by(safe);
   }
 
   public PositionDto get(UUID id) {
