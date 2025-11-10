@@ -134,7 +134,7 @@ public class FacultyServiceTest {
 
     @Test
     void page_addsDefaultSort_whenUnsorted() {
-        Pageable input = PageRequest.of(0, 10); // unsorted
+        Pageable input = PageRequest.of(0, 10);
         var entities = List.of(
                 Faculty.builder().id(UUID.randomUUID()).code("AA").name("X").build()
         );

@@ -65,7 +65,7 @@ class FacultyControllerTest {
 
     @Test
     void create_400_validation() throws Exception {
-        var bad = Map.of("name", ""); // нарушь свои @NotBlank
+        var bad = Map.of("name", "");
         mvc.perform(post("/api/v1/faculties")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsBytes(bad)))

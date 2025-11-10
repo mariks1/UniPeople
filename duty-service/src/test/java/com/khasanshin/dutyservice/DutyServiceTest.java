@@ -43,7 +43,7 @@ class DutyServiceTest {
 
     @Test
     void findAll_appliesDefaultSort_whenUnsorted() {
-        Pageable in = PageRequest.of(0, 10); // unsorted
+        Pageable in = PageRequest.of(0, 10);
         when(dutyRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
 
         service.findAll(in);
@@ -127,7 +127,6 @@ class DutyServiceTest {
 
         when(dutyRepository.findById(id)).thenReturn(Optional.of(e));
         doAnswer(inv -> null).when(dutyMapper).updateEntity(dto, e);
-        // flush без исключений
         when(dutyMapper.toDto(e)).thenReturn(DutyDto.builder().build());
 
         assertNotNull(service.update(id, dto));
@@ -172,7 +171,7 @@ class DutyServiceTest {
     @Test
     void listAssignments_defaultSort_whenUnsorted() {
         UUID dutyId = UUID.randomUUID();
-        Pageable in = PageRequest.of(0, 10); // unsorted
+        Pageable in = PageRequest.of(0, 10);
         when(dutyAssignmentRepository.findByDutyId(any(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 

@@ -5,21 +5,17 @@ import com.khasanshin.employmentservice.dto.CreateEmploymentDto;
 import com.khasanshin.employmentservice.dto.EmploymentDto;
 import com.khasanshin.employmentservice.dto.UpdateEmploymentDto;
 import com.khasanshin.employmentservice.entity.Employment;
-import com.khasanshin.employmentservice.exception.RemoteServiceUnavailableException;
-import com.khasanshin.employmentservice.feign.EmployeeClient;
+import com.khasanshin.employmentservice.feign.EmployeeVerifier;
 import com.khasanshin.employmentservice.feign.OrgClient;
+import com.khasanshin.employmentservice.feign.OrgVerifier;
 import com.khasanshin.employmentservice.mapper.EmploymentMapper;
 import com.khasanshin.employmentservice.repository.EmploymentRepository;
-import feign.FeignException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import reactor.core.publisher.Flux;
@@ -33,8 +29,9 @@ public class EmploymentService {
   private final EmploymentRepository repo;
   private final EmploymentMapper mapper;
   private final TransactionTemplate tx;
-  private final EmployeeClient employeeClient;
-  private final OrgClient orgClient;
+  private final OrgVerifier orgVerifier;
+  private final EmployeeVerifier employeeVerifier;
+
 
   public Mono<EmploymentDto> get(UUID id) {
     return Mono.fromCallable(() ->
@@ -46,9 +43,9 @@ public class EmploymentService {
 
   public Mono<EmploymentDto> create(CreateEmploymentDto dto) {
     return Mono.fromCallable(() -> {
-        ensureEmployeeExists(dto.getEmployeeId());
-        ensureDepartmentExists(dto.getDepartmentId());
-        ensurePositionExists(dto.getPositionId());
+        employeeVerifier.ensureEmployeeExists(dto.getEmployeeId());
+        orgVerifier.ensureDepartmentExists(dto.getDepartmentId());
+        orgVerifier.ensurePositionExists(dto.getPositionId());
 
         return tx.execute(status -> {
             var overlaps =
@@ -145,52 +142,4 @@ public class EmploymentService {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
-  @CircuitBreaker(name = "employeeClient", fallbackMethod = "employeeExistsUnavailable")
-  void ensureEmployeeExists(UUID employeeId) {
-      try {
-          ResponseEntity<Void> resp = employeeClient.exists(employeeId);
-          if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
-              throw new EntityNotFoundException("employee not found: " + employeeId);
-          }
-      } catch (FeignException.NotFound e) {
-          throw new EntityNotFoundException("employee not found: " + employeeId);
-      }
-  }
-
-  public void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
-      throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
-  }
-
-  @CircuitBreaker(name = "departmentClient", fallbackMethod = "departmentExistsUnavailable")
-  void ensureDepartmentExists(UUID departmentId) {
-      try {
-          ResponseEntity<Void> resp = orgClient.departmentExists(departmentId);
-
-          if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
-              throw new EntityNotFoundException("department not found: " + departmentId);
-          }
-      } catch (FeignException.NotFound e) {
-          throw new EntityNotFoundException("department not found: " + departmentId);
-      }
-  }
-
-  public void departmentExistsUnavailable(UUID departmentId, Throwable cause) {
-      throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
-  }
-
-  @CircuitBreaker(name = "positionClient", fallbackMethod = "positionExistsUnavailable")
-  void ensurePositionExists(UUID positionId) {
-      try {
-          ResponseEntity<Void> resp = orgClient.positionExists(positionId);
-          if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
-              throw new EntityNotFoundException("position not found: " + positionId);
-          }
-      } catch (FeignException.NotFound e) {
-          throw new EntityNotFoundException("position not found: " + positionId);
-      }
-  }
-
-  public void positionExistsUnavailable(UUID positionId, Throwable cause) {
-      throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
-  }
 }

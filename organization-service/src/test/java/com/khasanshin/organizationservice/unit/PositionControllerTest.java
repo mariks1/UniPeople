@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = PositionController.class)
-@Import(com.khasanshin.organizationservice.exception.GlobalExceptionHandler.class) // поправь пакет при необходимости
+@Import(com.khasanshin.organizationservice.exception.GlobalExceptionHandler.class)
 class PositionControllerTest {
 
     @Autowired MockMvc mvc;
@@ -84,7 +84,7 @@ class PositionControllerTest {
 
     @Test
     void create_400_validation() throws Exception {
-        var bad = Map.of("name", ""); // нарушь @NotBlank в CreatePositionDto
+        var bad = Map.of("name", "");
         mvc.perform(post("/api/v1/positions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsBytes(bad)))

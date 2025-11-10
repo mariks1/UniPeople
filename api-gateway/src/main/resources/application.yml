@@ -5,5 +5,10 @@ spring:
     import: "configserver:http://config-server:8888"
   cloud:
     config:
-      request-connect-timeout: 5000
-      request-read-timeout: 15000
+      request-connect-timeout: 10000
+      request-read-timeout: 25000
+      retry:
+        max-attempts: 20
+        initial-interval: 1000
+        multiplier: 1.5
+        max-interval: 5000

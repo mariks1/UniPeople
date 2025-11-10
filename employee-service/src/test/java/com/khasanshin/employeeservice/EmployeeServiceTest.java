@@ -8,12 +8,10 @@ import com.khasanshin.employeeservice.dto.CreateEmployeeDto;
 import com.khasanshin.employeeservice.dto.EmployeeDto;
 import com.khasanshin.employeeservice.dto.UpdateEmployeeDto;
 import com.khasanshin.employeeservice.entity.Employee;
-import com.khasanshin.employeeservice.exception.RemoteServiceUnavailableException;
-import com.khasanshin.employeeservice.feign.OrgClient;
+import com.khasanshin.employeeservice.feign.OrgVerifier;
 import com.khasanshin.employeeservice.mapper.EmployeeMapper;
 import com.khasanshin.employeeservice.repository.EmployeeRepository;
 import com.khasanshin.employeeservice.service.EmployeeService;
-import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
@@ -36,7 +34,7 @@ class EmployeeServiceTest {
     EmployeeMapper mapper;
 
     @Mock
-    OrgClient orgClient;
+    OrgVerifier orgVerifier;
 
     EmployeeService service;
 
@@ -69,7 +67,7 @@ class EmployeeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EmployeeService(employeeRepository, mapper, orgClient);
+        service = new EmployeeService(employeeRepository, mapper, orgVerifier);
     }
 
     @Test
@@ -107,7 +105,7 @@ class EmployeeServiceTest {
 
         Employee toSave = new Employee();
         when(mapper.toEntity(dto)).thenReturn(toSave);
-        doNothing().when(orgClient).departmentExists(dep);
+        doNothing().when(orgVerifier).ensureDepartmentExists(dep);
 
         Employee saved = employee(UUID.randomUUID(), "A", "B",
                 Employee.Status.ACTIVE, Instant.now(), dep);
@@ -118,7 +116,7 @@ class EmployeeServiceTest {
 
         assertNotNull(result);
         assertEquals(dep, result.getDepartmentId());
-        verify(orgClient).departmentExists(dep);
+        verify(orgVerifier).ensureDepartmentExists(dep);
         verify(employeeRepository).save(toSave);
     }
 
@@ -128,8 +126,8 @@ class EmployeeServiceTest {
         CreateEmployeeDto dto = CreateEmployeeDto.builder().departmentId(dep).build();
 
         when(mapper.toEntity(dto)).thenReturn(new Employee());
-        doThrow(mock(FeignException.NotFound.class)).when(orgClient).departmentExists(dep);
-
+        doThrow(new EntityNotFoundException("dept not found"))
+                    .when(orgVerifier).ensureDepartmentExists(dep);
         assertThrows(EntityNotFoundException.class, () -> service.create(dto));
         verify(employeeRepository, never()).save(any());
     }
@@ -144,7 +142,7 @@ class EmployeeServiceTest {
 
         Employee e = employee(id, "Old", "X", Employee.Status.ACTIVE, Instant.now(), null);
         when(employeeRepository.findById(id)).thenReturn(Optional.of(e));
-        doNothing().when(orgClient).departmentExists(dep);
+        doNothing().when(orgVerifier).ensureDepartmentExists(dep);
 
         EmployeeDto mapped = dtoFromEntity(e);
         when(mapper.toDto(e)).thenReturn(mapped);
@@ -156,7 +154,7 @@ class EmployeeServiceTest {
         assertEquals("M", e.getMiddleName());
         assertEquals(dep, e.getDepartment());
         assertSame(mapped, result);
-        verify(orgClient).departmentExists(dep);
+        verify(orgVerifier).ensureDepartmentExists(dep);
     }
 
     @Test
@@ -174,7 +172,8 @@ class EmployeeServiceTest {
 
         Employee e = employee(id, "A", "B", Employee.Status.ACTIVE, Instant.now(), null);
         when(employeeRepository.findById(id)).thenReturn(Optional.of(e));
-        doThrow(mock(FeignException.NotFound.class)).when(orgClient).departmentExists(dep);
+        doThrow(new EntityNotFoundException("dept not found"))
+                .when(orgVerifier).ensureDepartmentExists(dep);
 
         assertThrows(EntityNotFoundException.class, () -> service.update(id, dto));
     }
@@ -186,7 +185,7 @@ class EmployeeServiceTest {
 
         Employee e = employee(id, "A", "B", Employee.Status.ACTIVE, Instant.now(), dep);
         when(employeeRepository.findById(id)).thenReturn(Optional.of(e));
-        doNothing().when(orgClient).clearHeadByEmployee(id);
+        doNothing().when(orgVerifier).clearHeadByEmployee(id);
 
         EmployeeDto mapped = dtoFromEntity(e);
         when(mapper.toDto(e)).thenReturn(mapped);
@@ -196,7 +195,7 @@ class EmployeeServiceTest {
         assertEquals(Employee.Status.FIRED, e.getStatus());
         assertNull(e.getDepartment());
         assertSame(mapped, result);
-        verify(orgClient).clearHeadByEmployee(id);
+        verify(orgVerifier).clearHeadByEmployee(id);
     }
 
     @Test
@@ -206,16 +205,10 @@ class EmployeeServiceTest {
         when(employeeRepository.findById(id)).thenReturn(Optional.of(e));
         when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
 
-        spy(service);
-        EmployeeService spyService;
-
-        spyService = spy(new EmployeeService(employeeRepository, mapper, orgClient));
-
-        EmployeeDto out = spyService.fire(id);
+        EmployeeDto out = service.fire(id);
 
         assertNotNull(out);
-        verify(spyService, never()).clearHeadByEmployee(any());
-        verify(orgClient, never()).clearHeadByEmployee(any());
+        verify(orgVerifier, never()).clearHeadByEmployee(any());
     }
 
     @Test
@@ -357,17 +350,6 @@ class EmployeeServiceTest {
 
         assertEquals(Employee.Status.ACTIVE, e.getStatus());
         assertNotNull(out);
-    }
-
-    @Test
-    void ensureDepartmentUnavailable_mapsTo503() {
-        assertThrows(RemoteServiceUnavailableException.class,
-                () -> service.ensureDepartmentUnavailable(UUID.randomUUID(), new RuntimeException("x")));
-    }
-
-    @Test
-    void ignoreClearHead_doesNothing() {
-        assertDoesNotThrow(() -> service.ignoreClearHead(UUID.randomUUID(), new RuntimeException("x")));
     }
 
 }

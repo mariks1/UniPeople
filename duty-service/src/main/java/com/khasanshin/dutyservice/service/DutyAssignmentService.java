@@ -3,14 +3,11 @@ package com.khasanshin.dutyservice.service;
 import com.khasanshin.dutyservice.dto.AssignDutyDto;
 import com.khasanshin.dutyservice.dto.DutyAssignmentDto;
 import com.khasanshin.dutyservice.entity.DepartmentDutyAssignment;
-import com.khasanshin.dutyservice.exception.RemoteServiceUnavailableException;
-import com.khasanshin.dutyservice.feign.EmployeeClient;
-import com.khasanshin.dutyservice.feign.OrgClient;
+import com.khasanshin.dutyservice.feign.EmployeeVerifier;
+import com.khasanshin.dutyservice.feign.OrgVerifier;
 import com.khasanshin.dutyservice.mapper.DutyAssignmentMapper;
 import com.khasanshin.dutyservice.repository.DutyAssignmentRepository;
 import com.khasanshin.dutyservice.repository.DutyRepository;
-import feign.FeignException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +15,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +25,8 @@ public class DutyAssignmentService {
   private final DutyAssignmentRepository assignmentRepo;
   private final DutyAssignmentMapper mapper;
   private final DutyRepository dutyRepo;
-  private final OrgClient orgClient;
-  private final EmployeeClient employeeClient;
+  private final EmployeeVerifier employeeVerifier;
+  private final OrgVerifier orgVerifier;
 
   @Transactional
   public DutyAssignmentDto assign(UUID departmentId, AssignDutyDto req) {
@@ -39,9 +35,9 @@ public class DutyAssignmentService {
       throw new IllegalStateException("duty already assigned to employee in this department");
     }
 
-    ensureDepartmentExists(departmentId);
-    ensureEmployeeExists(req.getEmployeeId());
-    if (req.getAssignedBy() != null) ensureEmployeeExists(req.getAssignedBy());
+    orgVerifier.ensureDepartmentExists(departmentId);
+    employeeVerifier.ensureEmployeeExists(req.getEmployeeId());
+    if (req.getAssignedBy() != null) employeeVerifier.ensureEmployeeExists(req.getAssignedBy());
     ensureDutyExists(req.getDutyId());
 
     DepartmentDutyAssignment a =
@@ -80,40 +76,6 @@ public class DutyAssignmentService {
     }
     assignmentRepo.delete(a);
   }
-
-  @CircuitBreaker(name = "orgClient", fallbackMethod = "ensureDepartmentExistsUnavailable")
-  void ensureDepartmentExists(UUID id) {
-    try {
-      ResponseEntity<Void> resp = orgClient.departmentExists(id);
-      if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
-        throw new EntityNotFoundException("department not found: " + id);
-      }
-    } catch (FeignException.NotFound e) {
-      throw new EntityNotFoundException("department not found: " + id);
-    }
-  }
-
-  @CircuitBreaker(name = "employeeClient", fallbackMethod = "ensureEmployeeExistsUnavailable")
-  void ensureEmployeeExists(UUID id)   {
-    try {
-      ResponseEntity<Void> resp = employeeClient.employeeExists(id);
-      if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
-        throw new EntityNotFoundException("employee not found: " + id);
-      }
-    } catch (FeignException.NotFound e) {
-      throw new EntityNotFoundException("employee not found: " + id);
-    }
-  }
-
-
-  public void ensureDepartmentExistsUnavailable(UUID id, Throwable cause) {
-    throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
-  }
-
-  public void ensureEmployeeExistsUnavailable(UUID id, Throwable cause) {
-    throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
-  }
-
 
   void ensureDutyExists(UUID id) {
     if (!dutyRepo.existsById(id)) throw new EntityNotFoundException("duty " + id);

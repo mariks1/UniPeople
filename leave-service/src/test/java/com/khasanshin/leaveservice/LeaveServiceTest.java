@@ -42,8 +42,6 @@ class LeaveServiceTest {
         service = new LeaveService(leaveTypeRepository, leaveRequestRepository, leaveMapper);
     }
 
-    // -------- helpers
-
     private LeaveType type(UUID id, String code, Integer maxPerYear) {
         LeaveType t = new LeaveType();
         t.setId(id);
@@ -84,8 +82,6 @@ class LeaveServiceTest {
                 .build();
     }
 
-    // -------- leave types
-
     @Test
     void countTypes_ok() {
         when(leaveTypeRepository.count()).thenReturn(Mono.just(42L));
@@ -103,7 +99,6 @@ class LeaveServiceTest {
 
         assertEquals(1, out.size());
 
-        // захватываем pageable и убеждаемся, что размер ограничен 50
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
         verify(leaveTypeRepository).findAllBy(captor.capture());
         Pageable passed = captor.getValue();
@@ -180,8 +175,6 @@ class LeaveServiceTest {
         verify(leaveTypeRepository, never()).deleteById((UUID) any());
     }
 
-    // -------- leave requests: get
-
     @Test
     void get_ok() {
         UUID id = UUID.randomUUID();
@@ -201,8 +194,6 @@ class LeaveServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
-    // -------- create
-
     @Test
     void create_draft_ok_noLimitCheck() {
         UUID emp = UUID.randomUUID();
@@ -213,7 +204,7 @@ class LeaveServiceTest {
         CreateLeaveRequestDto dto = CreateLeaveRequestDto.builder()
                 .employeeId(emp).typeId(typeId)
                 .dateFrom(from).dateTo(to)
-                .submit(false) // draft
+                .submit(false)
                 .build();
 
         LeaveType type = type(typeId, "VAC", 28);
@@ -230,7 +221,6 @@ class LeaveServiceTest {
         assertNotNull(out);
         verify(leaveTypeRepository).findById(typeId);
         verify(leaveRequestRepository).existsOverlaps(emp, from, to);
-        // ensureWithinYearLimit не вызывается в draft ветке — мы это косвенно проверяем отсутствием вызова sumApprovedDaysForYear
         verify(leaveRequestRepository, never()).sumApprovedDaysForYear(any(), any(), anyInt());
     }
 
@@ -239,7 +229,7 @@ class LeaveServiceTest {
         UUID emp = UUID.randomUUID();
         UUID typeId = UUID.randomUUID();
         LocalDate from = LocalDate.of(2024, 2, 1);
-        LocalDate to = LocalDate.of(2024, 2, 3); // 3 дня
+        LocalDate to = LocalDate.of(2024, 2, 3);
 
         CreateLeaveRequestDto dto = CreateLeaveRequestDto.builder()
                 .employeeId(emp).typeId(typeId)
@@ -247,10 +237,10 @@ class LeaveServiceTest {
                 .submit(true)
                 .build();
 
-        LeaveType type = type(typeId, "VAC", 5); // лимит 5
+        LeaveType type = type(typeId, "VAC", 5);
         when(leaveTypeRepository.findById(typeId)).thenReturn(Mono.just(type));
         when(leaveRequestRepository.existsOverlaps(emp, from, to)).thenReturn(Mono.just(false));
-        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(1)); // 1 + 3 <= 5
+        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(1));
 
         LeaveRequest entity = req(UUID.randomUUID(), emp, typeId, from, to, LeaveRequest.Status.DRAFT);
         when(leaveMapper.toEntity(dto)).thenReturn(entity);
@@ -265,7 +255,7 @@ class LeaveServiceTest {
         UUID emp = UUID.randomUUID();
         UUID typeId = UUID.randomUUID();
         LocalDate from = LocalDate.of(2024, 3, 1);
-        LocalDate to = LocalDate.of(2024, 3, 5); // 5 дней
+        LocalDate to = LocalDate.of(2024, 3, 5);
 
         CreateLeaveRequestDto dto = CreateLeaveRequestDto.builder()
                 .employeeId(emp).typeId(typeId)
@@ -276,7 +266,7 @@ class LeaveServiceTest {
         LeaveType type = type(typeId, "VAC", 7);
         when(leaveTypeRepository.findById(typeId)).thenReturn(Mono.just(type));
         when(leaveRequestRepository.existsOverlaps(emp, from, to)).thenReturn(Mono.just(false));
-        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(4)); // 4 + 5 > 7
+        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(4));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.create(dto).block());
         assertTrue(ex.getMessage().contains("yearly limit exceeded"));
@@ -325,14 +315,12 @@ class LeaveServiceTest {
                 .employeeId(UUID.randomUUID())
                 .typeId(UUID.randomUUID())
                 .dateFrom(LocalDate.of(2024, 5, 10))
-                .dateTo(LocalDate.of(2024, 5, 1)) // to < from
+                .dateTo(LocalDate.of(2024, 5, 1))
                 .build();
 
         assertThrows(IllegalArgumentException.class, () -> service.create(dto).block());
         verifyNoInteractions(leaveTypeRepository, leaveRequestRepository);
     }
-
-    // -------- update
 
     @Test
     void update_ok_fromPending_validatesAndSaves() {
@@ -346,11 +334,11 @@ class LeaveServiceTest {
         when(leaveRequestRepository.findById(id)).thenReturn(Mono.just(existing));
 
         UpdateLeaveRequestDto dto = UpdateLeaveRequestDto.builder()
-                .dateTo(LocalDate.of(2024, 4, 4)) // расширим на день
+                .dateTo(LocalDate.of(2024, 4, 4))
                 .comment("upd")
                 .build();
 
-        doAnswer(inv -> { // применим изменения как mapstruct
+        doAnswer(inv -> {
             LeaveRequest target = inv.getArgument(1);
             target.setDateTo(LocalDate.of(2024, 4, 4));
             target.setComment("upd");
@@ -417,22 +405,20 @@ class LeaveServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
-    // -------- approve / reject / cancel
-
     @Test
     void approve_ok_checksLimit_andSavesApproved() {
         UUID id = UUID.randomUUID();
         UUID emp = UUID.randomUUID();
         UUID typeId = UUID.randomUUID();
         LocalDate from = LocalDate.of(2024, 6, 10);
-        LocalDate to = LocalDate.of(2024, 6, 12); // 3 дня
+        LocalDate to = LocalDate.of(2024, 6, 12);
 
         LeaveRequest e = req(id, emp, typeId, from, to, LeaveRequest.Status.PENDING);
         when(leaveRequestRepository.findById(id)).thenReturn(Mono.just(e));
 
         LeaveType type = type(typeId, "VAC", 10);
         when(leaveTypeRepository.findById(typeId)).thenReturn(Mono.just(type));
-        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(6)); // 6+3<=10
+        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(6));
 
         when(leaveRequestRepository.save(e)).thenReturn(Mono.just(e));
         when(leaveMapper.toDto(e)).thenAnswer(inv -> reqDto(e));
@@ -465,12 +451,12 @@ class LeaveServiceTest {
         UUID typeId = UUID.randomUUID();
 
         LeaveRequest e = req(id, emp, typeId,
-                LocalDate.of(2024,7,1), LocalDate.of(2024,7,4), LeaveRequest.Status.PENDING); // 4 дня
+                LocalDate.of(2024,7,1), LocalDate.of(2024,7,4), LeaveRequest.Status.PENDING);
         when(leaveRequestRepository.findById(id)).thenReturn(Mono.just(e));
 
         LeaveType type = type(typeId, "VAC", 7);
         when(leaveTypeRepository.findById(typeId)).thenReturn(Mono.just(type));
-        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(4)); // 4+4>7
+        when(leaveRequestRepository.sumApprovedDaysForYear(emp, typeId, 2024)).thenReturn(Mono.just(4));
 
         assertThrows(IllegalStateException.class, () -> service.approve(id, DecisionDto.builder().build()).block());
         verify(leaveRequestRepository, never()).save(any());
@@ -518,8 +504,6 @@ class LeaveServiceTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.cancel(e.getId()).block());
         assertTrue(ex.getMessage().contains("only PENDING/APPROVED"));
     }
-
-    // -------- lists & counts
 
     @Test
     void countLeaveByEmployee_ok() {

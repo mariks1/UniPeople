@@ -4,12 +4,9 @@ import com.khasanshin.employeeservice.dto.CreateEmployeeDto;
 import com.khasanshin.employeeservice.dto.EmployeeDto;
 import com.khasanshin.employeeservice.dto.UpdateEmployeeDto;
 import com.khasanshin.employeeservice.entity.Employee;
-import com.khasanshin.employeeservice.exception.RemoteServiceUnavailableException;
-import com.khasanshin.employeeservice.feign.OrgClient;
+import com.khasanshin.employeeservice.feign.OrgVerifier;
 import com.khasanshin.employeeservice.mapper.EmployeeMapper;
 import com.khasanshin.employeeservice.repository.EmployeeRepository;
-import feign.FeignException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -28,7 +25,7 @@ public class EmployeeService {
 
   private final EmployeeRepository employeeRepository;
   private final EmployeeMapper mapper;
-  private final OrgClient orgClient;
+  private final OrgVerifier orgVerifier;
 
   private static final Sort DEFAULT_SORT =
       Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
@@ -41,7 +38,7 @@ public class EmployeeService {
     Employee employee = mapper.toEntity(dto);
 
     if (dto.getDepartmentId() != null) {
-      ensureDepartmentExists(dto.getDepartmentId());
+      orgVerifier.ensureDepartmentExists(dto.getDepartmentId());
       employee.setDepartment(dto.getDepartmentId());
     }
 
@@ -68,7 +65,7 @@ public class EmployeeService {
     }
 
     if (dto.getDepartmentId() != null) {
-      ensureDepartmentExists(dto.getDepartmentId());
+      orgVerifier.ensureDepartmentExists(dto.getDepartmentId());
       employee.setDepartment(dto.getDepartmentId());
     }
 
@@ -94,7 +91,7 @@ public class EmployeeService {
       return mapper.toDto(employee);
     }
 
-    clearHeadByEmployee(id);
+    orgVerifier.clearHeadByEmployee(id);
 
     employee.setDepartment(null);
     employee.setStatus(Employee.Status.FIRED);
@@ -150,26 +147,5 @@ public class EmployeeService {
     e.setStatus(Employee.Status.ACTIVE);
     return mapper.toDto(e);
   }
-
-  @CircuitBreaker(name = "orgClient", fallbackMethod = "ensureDepartmentUnavailable")
-  void ensureDepartmentExists(UUID departmentId) {
-    try {
-      orgClient.departmentExists(departmentId);
-    } catch (FeignException.NotFound e) {
-      throw new EntityNotFoundException("department not found: " + departmentId);
-    }
-  }
-
-  public void ensureDepartmentUnavailable(UUID departmentId, Throwable cause) {
-    throw new RemoteServiceUnavailableException("organization-service unavailable", cause);
-  }
-
-  @CircuitBreaker(name = "orgClient", fallbackMethod = "ignoreClearHead")
-  public void clearHeadByEmployee(UUID employeeId) {
-    orgClient.clearHeadByEmployee(employeeId);
-  }
-
-
-  public void ignoreClearHead(UUID employeeId, Throwable cause) {}
 
 }

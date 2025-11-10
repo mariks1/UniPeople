@@ -5,7 +5,9 @@ import com.khasanshin.dutyservice.dto.DutyAssignmentDto;
 import com.khasanshin.dutyservice.entity.DepartmentDutyAssignment;
 import com.khasanshin.dutyservice.exception.RemoteServiceUnavailableException;
 import com.khasanshin.dutyservice.feign.EmployeeClient;
+import com.khasanshin.dutyservice.feign.EmployeeVerifier;
 import com.khasanshin.dutyservice.feign.OrgClient;
+import com.khasanshin.dutyservice.feign.OrgVerifier;
 import com.khasanshin.dutyservice.mapper.DutyAssignmentMapper;
 import com.khasanshin.dutyservice.repository.DutyAssignmentRepository;
 import com.khasanshin.dutyservice.repository.DutyRepository;
@@ -32,14 +34,17 @@ class DutyAssignmentServiceTest {
     @Mock DutyAssignmentRepository assignmentRepo;
     @Mock DutyAssignmentMapper mapper;
     @Mock DutyRepository dutyRepo;
-    @Mock OrgClient orgClient;
-    @Mock EmployeeClient employeeClient;
+    @Mock
+    EmployeeVerifier employeeVerifier;
+    @Mock
+    OrgVerifier orgVerifier;
+
 
     DutyAssignmentService service;
 
     @BeforeEach
     void setUp() {
-        service = new DutyAssignmentService(assignmentRepo, mapper, dutyRepo, orgClient, employeeClient);
+        service = new DutyAssignmentService(assignmentRepo, mapper, dutyRepo, employeeVerifier, orgVerifier);
     }
 
     @Test
@@ -56,8 +61,8 @@ class DutyAssignmentServiceTest {
                 .build();
 
         when(assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(dept, emp, duty)).thenReturn(false);
-        when(orgClient.departmentExists(dept)).thenReturn(ResponseEntity.ok().build());
-        when(employeeClient.employeeExists(emp)).thenReturn(ResponseEntity.ok().build());
+        doNothing().when(orgVerifier).ensureDepartmentExists(dept);
+        doNothing().when(employeeVerifier).ensureEmployeeExists(emp);
         when(dutyRepo.existsById(duty)).thenReturn(true);
 
         DepartmentDutyAssignment saved = DepartmentDutyAssignment.builder()
@@ -68,9 +73,8 @@ class DutyAssignmentServiceTest {
 
         assertNotNull(service.assign(dept, req));
 
-        // убеждаемся, что именно эти проверки прошли
-        verify(orgClient).departmentExists(dept);
-        verify(employeeClient).employeeExists(emp);
+        verify(orgVerifier).ensureDepartmentExists(dept);
+        verify(employeeVerifier).ensureEmployeeExists(emp);
         verify(dutyRepo).existsById(duty);
         verify(assignmentRepo).saveAndFlush(any(DepartmentDutyAssignment.class));
     }
@@ -87,7 +91,7 @@ class DutyAssignmentServiceTest {
                 .thenReturn(true);
 
         assertThrows(IllegalStateException.class, () -> service.assign(dept, req));
-        verifyNoInteractions(orgClient, employeeClient, dutyRepo);
+        verifyNoInteractions(orgVerifier, employeeVerifier, dutyRepo);
     }
 
     @Test
@@ -100,10 +104,11 @@ class DutyAssignmentServiceTest {
 
         when(assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(eq(dept), any(), any()))
                 .thenReturn(false);
-        doThrow(mock(FeignException.NotFound.class)).when(orgClient).departmentExists(dept);
+        doThrow(new EntityNotFoundException("dept not found"))
+                .when(orgVerifier).ensureDepartmentExists(dept);
 
         assertThrows(EntityNotFoundException.class, () -> service.assign(dept, req));
-        verify(employeeClient, never()).employeeExists(any());
+        verify(employeeVerifier, never()).ensureEmployeeExists(any());
         verify(dutyRepo, never()).existsById(any());
     }
 
@@ -119,8 +124,9 @@ class DutyAssignmentServiceTest {
                 .build();
 
         when(assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(dept, emp, duty)).thenReturn(false);
-        when(orgClient.departmentExists(dept)).thenReturn(ResponseEntity.ok().build());
-        doThrow(mock(FeignException.NotFound.class)).when(employeeClient).employeeExists(emp);
+        doNothing().when(orgVerifier).ensureDepartmentExists(dept);
+        doThrow(new EntityNotFoundException("emp not found"))
+                     .when(employeeVerifier).ensureEmployeeExists(emp);
 
         assertThrows(EntityNotFoundException.class, () -> service.assign(dept, req));
         verify(dutyRepo, never()).existsById(any());
@@ -137,9 +143,9 @@ class DutyAssignmentServiceTest {
                 .employeeId(emp).assignedBy(by).dutyId(duty).build();
 
         when(assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(dept, emp, duty)).thenReturn(false);
-        when(orgClient.departmentExists(dept)).thenReturn(ResponseEntity.ok().build());
-        when(employeeClient.employeeExists(emp)).thenReturn(ResponseEntity.ok().build());
-        when(employeeClient.employeeExists(by)).thenReturn(ResponseEntity.ok().build());
+        doNothing().when(orgVerifier).ensureDepartmentExists(dept);
+        doNothing().when(employeeVerifier).ensureEmployeeExists(emp);
+        doNothing().when(employeeVerifier).ensureEmployeeExists(by);
         when(dutyRepo.existsById(duty)).thenReturn(true);
 
         DepartmentDutyAssignment saved = DepartmentDutyAssignment.builder()
@@ -149,7 +155,7 @@ class DutyAssignmentServiceTest {
 
         assertNotNull(service.assign(dept, req));
 
-        verify(employeeClient).employeeExists(by);
+        verify(employeeVerifier).ensureEmployeeExists(by);
     }
 
     @Test
@@ -161,8 +167,8 @@ class DutyAssignmentServiceTest {
         AssignDutyDto req = AssignDutyDto.builder().employeeId(emp).dutyId(duty).build();
 
         when(assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(dept, emp, duty)).thenReturn(false);
-        when(orgClient.departmentExists(dept)).thenReturn(ResponseEntity.ok().build());
-        when(employeeClient.employeeExists(emp)).thenReturn(ResponseEntity.ok().build());
+        doNothing().when(orgVerifier).ensureDepartmentExists(dept);
+        doNothing().when(employeeVerifier).ensureEmployeeExists(emp);
         when(dutyRepo.existsById(duty)).thenReturn(false);
 
         assertThrows(EntityNotFoundException.class, () -> service.assign(dept, req));
@@ -172,7 +178,7 @@ class DutyAssignmentServiceTest {
     @Test
     void list_defaultSort_whenUnsorted() {
         UUID dept = UUID.randomUUID();
-        Pageable in = PageRequest.of(0, 20); // unsorted
+        Pageable in = PageRequest.of(0, 20);
         when(assignmentRepo.findByDepartmentId(any(), any(Pageable.class))).thenReturn(Page.empty());
 
         service.list(dept, in);
@@ -231,17 +237,4 @@ class DutyAssignmentServiceTest {
         verify(assignmentRepo, never()).delete(any());
     }
 
-    // -------- fallbacks
-
-    @Test
-    void ensureDepartmentExistsUnavailable_throws503() {
-        assertThrows(RemoteServiceUnavailableException.class,
-                () -> service.ensureDepartmentExistsUnavailable(UUID.randomUUID(), new RuntimeException("x")));
-    }
-
-    @Test
-    void ensureEmployeeExistsUnavailable_throws503() {
-        assertThrows(RemoteServiceUnavailableException.class,
-                () -> service.ensureEmployeeExistsUnavailable(UUID.randomUUID(), new RuntimeException("x")));
-    }
 }

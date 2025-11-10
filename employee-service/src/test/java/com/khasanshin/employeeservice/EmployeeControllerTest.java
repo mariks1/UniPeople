@@ -36,8 +36,6 @@ class EmployeeControllerTest {
     @Autowired ObjectMapper mapper;
     @MockitoBean EmployeeService service;
 
-    // -------- GET by id
-
     @Test
     void get_ok() throws Exception {
         UUID id = UUID.randomUUID();
@@ -57,8 +55,6 @@ class EmployeeControllerTest {
         mvc.perform(get("/api/v1/employees/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound());
     }
-
-    // -------- POST create
 
     @Test
     void create_201() throws Exception {
@@ -95,8 +91,6 @@ class EmployeeControllerTest {
                 .andExpect(status().isUnsupportedMediaType());
     }
 
-    // -------- PUT update
-
     @Test
     void update_200() throws Exception {
         var id = UUID.randomUUID();
@@ -122,8 +116,6 @@ class EmployeeControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------- DELETE
-
     @Test
     void delete_204() throws Exception {
         doNothing().when(service).delete(any());
@@ -135,14 +127,11 @@ class EmployeeControllerTest {
     @Test
     void delete_404() throws Exception {
         var id = UUID.randomUUID();
-        // глобальный хэндлер должен маппить EntityNotFoundException -> 404
         org.mockito.Mockito.doThrow(new EntityNotFoundException()).when(service).delete(eq(id));
 
         mvc.perform(delete("/api/v1/employees/{id}", id))
                 .andExpect(status().isNotFound());
     }
-
-    // -------- fire / activate
 
     @Test
     void fire_200() throws Exception {
@@ -166,8 +155,6 @@ class EmployeeControllerTest {
                 .andExpect(jsonPath("$.id").value(id.toString()));
     }
 
-    // -------- HEAD
-
     @Test
     void head_200_whenExists() throws Exception {
         var id = UUID.randomUUID();
@@ -187,8 +174,6 @@ class EmployeeControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // -------- page + X-Total-Count
-
     @Test
     void page_ok_withSortAndPageable_andHeader() throws Exception {
         var dto = EmployeeDto.builder().id(UUID.randomUUID()).firstName("A").lastName("B").build();
@@ -201,8 +186,6 @@ class EmployeeControllerTest {
                 .andExpect(jsonPath("$.content[0].first_name").value("A"))
                 .andExpect(jsonPath("$.totalElements").value(42));
     }
-
-    // -------- stream (infinite scroll)
 
     @Test
     void stream_ok() throws Exception {

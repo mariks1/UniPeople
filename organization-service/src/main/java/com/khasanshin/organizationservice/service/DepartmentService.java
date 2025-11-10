@@ -6,6 +6,7 @@ import com.khasanshin.organizationservice.dto.UpdateDepartmentDto;
 import com.khasanshin.organizationservice.entity.Department;
 import com.khasanshin.organizationservice.exception.RemoteServiceUnavailableException;
 import com.khasanshin.organizationservice.feign.EmployeeClient;
+import com.khasanshin.organizationservice.feign.EmployeeVerifier;
 import com.khasanshin.organizationservice.mapper.DepartmentMapper;
 import com.khasanshin.organizationservice.repository.DepartmentRepository;
 import com.khasanshin.organizationservice.repository.FacultyRepository;
@@ -33,7 +34,7 @@ public class DepartmentService {
   private final DepartmentRepository departmentRepository;
   private final DepartmentMapper mapper;
   private final FacultyRepository facultyRepository;
-  private final EmployeeClient employeeClient;
+  private final EmployeeVerifier employeeVerifier;
 
   private static final Sort DEFAULT_SORT = Sort.by(Sort.Direction.ASC, "name");
   private static final Set<String> ALLOWED_SORT =
@@ -65,7 +66,7 @@ public class DepartmentService {
     }
 
     if (dto.getHeadEmployeeId() != null) {
-      ensureEmployeeExists(dto.getHeadEmployeeId());
+      employeeVerifier.ensureEmployeeExists(dto.getHeadEmployeeId());
     }
 
     var e = mapper.toEntity(dto);
@@ -86,7 +87,7 @@ public class DepartmentService {
       throw new EntityNotFoundException("faculty " + dto.getFacultyId());
     }
     if (dto.getHeadEmployeeId() != null) {
-      ensureEmployeeExists(dto.getHeadEmployeeId());
+      employeeVerifier.ensureEmployeeExists(dto.getHeadEmployeeId());
     }
 
     mapper.updateEntity(dto, e);
@@ -112,7 +113,7 @@ public class DepartmentService {
             .findById(deptId)
             .orElseThrow(() -> new EntityNotFoundException("department not found: " + deptId));
 
-    ensureEmployeeExists(employeeId);
+    employeeVerifier.ensureEmployeeExists(employeeId);
     dep.setHeadEmployee(employeeId);
     return mapper.toDto(dep);
   }
@@ -132,21 +133,6 @@ public class DepartmentService {
     return departmentRepository.findAll(p).map(mapper::toDto);
   }
 
-  @CircuitBreaker(name = "employeeClient", fallbackMethod = "employeeExistsUnavailable")
-  void ensureEmployeeExists(UUID employeeId) {
-    try {
-      ResponseEntity<Void> resp = employeeClient.exists(employeeId);
-      if (resp == null || !resp.getStatusCode().is2xxSuccessful()) {
-        throw new EntityNotFoundException("employeeId not found: " + employeeId);
-      }
-    } catch (FeignException.NotFound e) {
-      throw new EntityNotFoundException("employeeId not found: " + employeeId);
-    }
-  }
-
-  public void employeeExistsUnavailable(UUID employeeId, Throwable cause) {
-    throw new RemoteServiceUnavailableException("employee-service unavailable", cause);
-  }
 
   @Transactional
   public int clearHeadByEmployee(UUID employeeId) {

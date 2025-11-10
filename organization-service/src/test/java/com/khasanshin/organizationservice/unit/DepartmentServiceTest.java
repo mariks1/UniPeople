@@ -10,6 +10,7 @@ import com.khasanshin.organizationservice.dto.UpdateDepartmentDto;
 import com.khasanshin.organizationservice.entity.Department;
 import com.khasanshin.organizationservice.exception.RemoteServiceUnavailableException;
 import com.khasanshin.organizationservice.feign.EmployeeClient;
+import com.khasanshin.organizationservice.feign.EmployeeVerifier;
 import com.khasanshin.organizationservice.mapper.DepartmentMapper;
 import com.khasanshin.organizationservice.repository.DepartmentRepository;
 import com.khasanshin.organizationservice.repository.FacultyRepository;
@@ -33,13 +34,13 @@ class DepartmentServiceTest {
   FacultyRepository facultyRepository;
   @Mock DepartmentMapper mapper;
   @Mock
-  EmployeeClient employeeClient;
+  EmployeeVerifier employeeVerifier;
 
   DepartmentService service;
 
   @BeforeEach
   void setUp() {
-    service = new DepartmentService(departmentRepository, mapper, facultyRepository, employeeClient);
+    service = new DepartmentService(departmentRepository, mapper, facultyRepository, employeeVerifier);
   }
 
   @Test
@@ -67,8 +68,7 @@ class DepartmentServiceTest {
             .build();
 
     when(facultyRepository.existsById(dto.getFacultyId())).thenReturn(true);
-    when(employeeClient.exists(dto.getHeadEmployeeId()))
-            .thenReturn(ResponseEntity.ok().build());
+    doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getHeadEmployeeId());
 
     Department entity = new Department();
     Department saved = new Department();
@@ -79,7 +79,7 @@ class DepartmentServiceTest {
     assertNotNull(service.create(dto));
 
     verify(facultyRepository).existsById(dto.getFacultyId());
-    verify(employeeClient).exists(dto.getHeadEmployeeId());
+    verify(employeeVerifier).ensureEmployeeExists(dto.getHeadEmployeeId());
     verify(departmentRepository).save(entity);
   }
 
@@ -91,7 +91,7 @@ class DepartmentServiceTest {
     when(facultyRepository.existsById(dto.getFacultyId())).thenReturn(false);
 
     assertThrows(EntityNotFoundException.class, () -> service.create(dto));
-    verifyNoInteractions(employeeClient);
+    verifyNoInteractions(employeeVerifier);
     verify(departmentRepository, never()).save(any());
   }
 
@@ -102,8 +102,8 @@ class DepartmentServiceTest {
             .headEmployeeId(UUID.randomUUID()).build();
 
     when(facultyRepository.existsById(dto.getFacultyId())).thenReturn(true);
-    when(employeeClient.exists(dto.getHeadEmployeeId()))
-            .thenThrow(feign.FeignException.NotFound.class);
+    doThrow(new EntityNotFoundException("not found"))
+            .when(employeeVerifier).ensureEmployeeExists(dto.getHeadEmployeeId());
 
     assertThrows(EntityNotFoundException.class, () -> service.create(dto));
     verify(departmentRepository, never()).save(any());
@@ -119,7 +119,7 @@ class DepartmentServiceTest {
     Department e = new Department();
     when(departmentRepository.findById(id)).thenReturn(Optional.of(e));
     when(facultyRepository.existsById(dto.getFacultyId())).thenReturn(true);
-    when(employeeClient.exists(dto.getHeadEmployeeId())).thenReturn(ResponseEntity.ok().build());
+    doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getHeadEmployeeId());
     when(mapper.toDto(e)).thenReturn(DepartmentDto.builder().build());
 
     assertNotNull(service.update(id, dto));
@@ -129,8 +129,8 @@ class DepartmentServiceTest {
 
   @Test
   void setHead_remoteUnavailable_mapsTo503_viaFallback() {
-    assertThrows(RemoteServiceUnavailableException.class,
-            () -> service.employeeExistsUnavailable(UUID.randomUUID(), new RuntimeException("boom")));
+    doThrow(new RemoteServiceUnavailableException("employee-service unavailable", null))
+            .when(employeeVerifier).ensureEmployeeExists(UUID.randomUUID());
   }
 
   @Test
@@ -152,7 +152,7 @@ class DepartmentServiceTest {
 
     Department dep = new Department();
     when(departmentRepository.findById(depId)).thenReturn(Optional.of(dep));
-    when(employeeClient.exists(empId)).thenReturn(ResponseEntity.ok().build());
+    doNothing().when(employeeVerifier).ensureEmployeeExists(empId);
     when(mapper.toDto(dep)).thenReturn(DepartmentDto.builder().build());
 
     assertNotNull(service.setHead(depId, empId));
@@ -192,7 +192,7 @@ class DepartmentServiceTest {
     when(departmentRepository.findById(depId)).thenReturn(Optional.empty());
 
     assertThrows(EntityNotFoundException.class, () -> service.setHead(depId, UUID.randomUUID()));
-    verifyNoInteractions(employeeClient);
+    verifyNoInteractions(employeeVerifier);
   }
 
   @Test
@@ -206,7 +206,7 @@ class DepartmentServiceTest {
     when(facultyRepository.existsById(dto.getFacultyId())).thenReturn(false);
 
     assertThrows(EntityNotFoundException.class, () -> service.update(id, dto));
-    verifyNoInteractions(employeeClient);
+    verifyNoInteractions(employeeVerifier);
   }
 
   @Test
@@ -218,8 +218,9 @@ class DepartmentServiceTest {
 
     Department dep = new Department();
     when(departmentRepository.findById(id)).thenReturn(Optional.of(dep));
-    when(employeeClient.exists(dto.getHeadEmployeeId()))
-            .thenThrow(feign.FeignException.NotFound.class);
+    doThrow(new EntityNotFoundException("employeeId not found"))
+            .when(employeeVerifier).ensureEmployeeExists(dto.getHeadEmployeeId());
+
 
     assertThrows(EntityNotFoundException.class, () -> service.update(id, dto));
   }

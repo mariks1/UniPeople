@@ -2,6 +2,7 @@ package com.khasanshin.employeeservice.feign;
 
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -10,7 +11,7 @@ import java.util.UUID;
 public interface OrgClient {
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
-    void departmentExists(@PathVariable("id") UUID id);
+    ResponseEntity<Void> departmentExists(@PathVariable("id") UUID id);
 
     @DeleteMapping("/departments/head/by-employee/{employeeId}")
     void clearHeadByEmployee(@PathVariable("employeeId") UUID employeeId);

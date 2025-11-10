@@ -7,7 +7,9 @@ import com.khasanshin.employmentservice.dto.UpdateEmploymentDto;
 import com.khasanshin.employmentservice.entity.Employment;
 import com.khasanshin.employmentservice.exception.RemoteServiceUnavailableException;
 import com.khasanshin.employmentservice.feign.EmployeeClient;
+import com.khasanshin.employmentservice.feign.EmployeeVerifier;
 import com.khasanshin.employmentservice.feign.OrgClient;
+import com.khasanshin.employmentservice.feign.OrgVerifier;
 import com.khasanshin.employmentservice.mapper.EmploymentMapper;
 import com.khasanshin.employmentservice.repository.EmploymentRepository;
 import com.khasanshin.employmentservice.service.EmploymentService;
@@ -39,14 +41,16 @@ class EmploymentServiceTest {
     @Mock EmploymentRepository repo;
     @Mock EmploymentMapper mapper;
     @Mock TransactionTemplate tx;
-    @Mock EmployeeClient employeeClient;
-    @Mock OrgClient orgClient;
+    @Mock
+    EmployeeVerifier employeeVerifier;
+    @Mock
+    OrgVerifier orgVerifier;
 
     EmploymentService service;
 
     @BeforeEach
     void setUp() {
-        service = new EmploymentService(repo, mapper, tx, employeeClient, orgClient);
+        service = new EmploymentService(repo, mapper, tx, orgVerifier, employeeVerifier);
 
         lenient().when(tx.execute(any()))
                 .thenAnswer(inv -> {
@@ -111,9 +115,10 @@ class EmploymentServiceTest {
                 .startDate(LocalDate.of(2024,1,1))
                 .build();
 
-        when(employeeClient.exists(empId)).thenReturn(ResponseEntity.ok().build());
-        when(orgClient.departmentExists(depId)).thenReturn(ResponseEntity.ok().build());
-        when(orgClient.positionExists(posId)).thenReturn(ResponseEntity.ok().build());
+        doNothing().when(employeeVerifier).ensureEmployeeExists(empId);
+        doNothing().when(orgVerifier).ensureDepartmentExists(depId);
+        doNothing().when(orgVerifier).ensurePositionExists(posId);
+
 
         when(repo.findOverlaps(empId, depId, posId, dto.getStartDate(), null)).thenReturn(List.of());
 
@@ -139,9 +144,9 @@ class EmploymentServiceTest {
         assertEquals(BigDecimal.valueOf(1.00), captor.getValue().getRate());
 
         verify(repo).findOverlaps(empId, depId, posId, dto.getStartDate(), null);
-        verify(employeeClient).exists(empId);
-        verify(orgClient).departmentExists(depId);
-        verify(orgClient).positionExists(posId);
+        verify(employeeVerifier).ensureEmployeeExists(empId);
+        verify(orgVerifier).ensureDepartmentExists(depId);
+        verify(orgVerifier).ensurePositionExists(posId);
     }
 
     @Test
@@ -153,9 +158,9 @@ class EmploymentServiceTest {
                 .startDate(LocalDate.of(2024,1,1))
                 .build();
 
-        when(employeeClient.exists(dto.getEmployeeId())).thenReturn(ResponseEntity.ok().build());
-        when(orgClient.departmentExists(dto.getDepartmentId())).thenReturn(ResponseEntity.ok().build());
-        when(orgClient.positionExists(dto.getPositionId())).thenReturn(ResponseEntity.ok().build());
+        doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
+        doNothing().when(orgVerifier).ensureDepartmentExists(dto.getDepartmentId());
+        doNothing().when(orgVerifier).ensurePositionExists(dto.getPositionId());
         when(repo.findOverlaps(any(), any(), any(), any(), isNull()))
                 .thenReturn(List.of(new Employment()));
 
@@ -172,7 +177,8 @@ class EmploymentServiceTest {
                 .startDate(LocalDate.now())
                 .build();
 
-        doThrow(mock(FeignException.NotFound.class)).when(employeeClient).exists(dto.getEmployeeId());
+        doThrow(new EntityNotFoundException("employee not found"))
+                .when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
 
         assertThrows(EntityNotFoundException.class, () -> service.create(dto).block());
     }
@@ -186,8 +192,9 @@ class EmploymentServiceTest {
                 .startDate(LocalDate.now())
                 .build();
 
-        when(employeeClient.exists(dto.getEmployeeId())).thenReturn(ResponseEntity.ok().build());
-        doThrow(mock(FeignException.NotFound.class)).when(orgClient).departmentExists(dto.getDepartmentId());
+        doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
+        doThrow(new EntityNotFoundException("department not found"))
+                .when(orgVerifier).ensureDepartmentExists(dto.getDepartmentId());
 
         assertThrows(EntityNotFoundException.class, () -> service.create(dto).block());
     }
@@ -201,9 +208,10 @@ class EmploymentServiceTest {
                 .startDate(LocalDate.now())
                 .build();
 
-        when(employeeClient.exists(dto.getEmployeeId())).thenReturn(ResponseEntity.ok().build());
-        when(orgClient.departmentExists(dto.getDepartmentId())).thenReturn(ResponseEntity.ok().build());
-        doThrow(mock(FeignException.NotFound.class)).when(orgClient).positionExists(dto.getPositionId());
+        doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
+        doNothing().when(orgVerifier).ensureDepartmentExists(dto.getDepartmentId());
+        doThrow(new EntityNotFoundException("position not found"))
+                .when(orgVerifier).ensurePositionExists(dto.getPositionId());
 
         assertThrows(EntityNotFoundException.class, () -> service.create(dto).block());
     }
@@ -437,21 +445,4 @@ class EmploymentServiceTest {
         verify(repo).countByDepartmentId(dep);
     }
 
-    @Test
-    void employeeExistsUnavailable_throws503() {
-        assertThrows(RemoteServiceUnavailableException.class,
-                () -> service.employeeExistsUnavailable(UUID.randomUUID(), new RuntimeException("x")));
-    }
-
-    @Test
-    void departmentExistsUnavailable_throws503() {
-        assertThrows(RemoteServiceUnavailableException.class,
-                () -> service.departmentExistsUnavailable(UUID.randomUUID(), new RuntimeException("x")));
-    }
-
-    @Test
-    void positionExistsUnavailable_throws503() {
-        assertThrows(RemoteServiceUnavailableException.class,
-                () -> service.positionExistsUnavailable(UUID.randomUUID(), new RuntimeException("x")));
-    }
 }

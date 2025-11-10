@@ -26,7 +26,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @WebFluxTest(controllers = LeaveTypeController.class)
-@Import(GlobalExceptionHandler.class) // если есть
+@Import(GlobalExceptionHandler.class)
 class LeaveTypeControllerTest {
 
     @Autowired
