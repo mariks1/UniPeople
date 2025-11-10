@@ -1,0 +1,3 @@
+[submodule "UniPeople-config"]
+	path = UniPeople-config
+	url = https://github.com/mariks1/UniPeople-config

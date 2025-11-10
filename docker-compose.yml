@@ -1,31 +1,110 @@
 services:
-  db:
+  postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: hrdb
-      POSTGRES_USER: hr
-      POSTGRES_PASSWORD: hrpwd
+      POSTGRES_DB: unipeople
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports: ["5432:5432"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hr -d hrdb"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d unipeople"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
-  app:
-    build: .
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      DB_URL: jdbc:postgresql://db:5432/hrdb
-      DB_USER: hr
-      DB_PASSWORD: hrpwd
-      TZ: Europe/Moscow
-    ports: ["8080:8080"]
+  eureka-server:
+    build: ./eureka-server
+    ports: ["18761:18761"]
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:18761/actuator/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  config-server:
+    build: ./config-server
+    ports: [ "8888:8888" ]
     depends_on:
-      db:
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8888/actuator/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  api-gateway:
+    build: ./api-gateway
+    ports: ["8080:8080"]
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  organization-service:
+    build: ./organization-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  employee-service:
+    build: ./employee-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  employment-service:
+    build: ./employment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  duty-service:
+    build: ./duty-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  leave-service:
+    build: ./leave-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
         condition: service_healthy
 
 volumes:
-  pgdata:
+  pg-data:
