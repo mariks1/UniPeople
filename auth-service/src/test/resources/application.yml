@@ -1,0 +1,36 @@
+spring:
+  config:
+    import: "optional:"           # полностью глушим любые импорты (в т.ч. config-server)
+  cloud:
+    config:
+      enabled: false
+    bootstrap:
+      enabled: false
+  # чтобы никакие БД/скрипты не стартовали даже если где-то есть @SpringBootTest
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+  sql:
+    init:
+      mode: never
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+eureka:
+  client:
+    enabled: false
+
+# на всякий случай, чтобы не падать из-за отсутствия пропертей jwt
+security:
+  jwt:
+    issuer: "test-issuer"
+    audience: "test-audience"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

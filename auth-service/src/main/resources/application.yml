@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: auth-service
+  config:
+    import: "configserver:http://config-server:18888"
+  cloud:
+    config:
+      request-connect-timeout: 10000
+      request-read-timeout: 25000
+      retry:
+        max-attempts: 20
+        initial-interval: 1000
+        multiplier: 1.5
+        max-interval: 5000
