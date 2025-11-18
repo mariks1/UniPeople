@@ -1,4 +1,4 @@
-package com.khasanshin.authservice.config;
+package com.khasanshin.organizationservice.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -8,8 +8,6 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -18,12 +16,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-
-import java.security.interfaces.RSAPublicKey;
 
 @Configuration
 @EnableMethodSecurity
@@ -34,12 +29,12 @@ public class SecurityConfig {
                               JwtDecoder decoder,
                               Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthConverter) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(a -> a
-                        .requestMatchers("/.well-known/jwks.json", "/api/v1/auth/login",
-                                "/v3/api-docs/**",
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health","/v3/api-docs/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**").permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated()
+                )
                 .oauth2ResourceServer(o -> o.jwt(j -> j
                         .decoder(decoder)
                         .jwtAuthenticationConverter(jwtAuthConverter)
@@ -48,19 +43,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(
-            RSAPublicKey pub,
-            @Value("${security.jwt.issuer}") String issuer,
-            @Value("${security.jwt.audience}") String audience
-    ) {
-        var decoder = NimbusJwtDecoder.withPublicKey(pub).build();
-
+    JwtDecoder jwtDecoder(@Value("${security.jwt.issuer:https://auth.unipeople}") String issuer,
+                          @Value("${security.jwt.audience:unipeople-api}") String audience,
+                          @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwk) {
+        var decoder = NimbusJwtDecoder.withJwkSetUri(jwk).build();
         var withIssuer = JwtValidators.createDefaultWithIssuer(issuer);
         OAuth2TokenValidator<Jwt> withAudience = jwt ->
                 jwt.getAudience().contains(audience)
                         ? OAuth2TokenValidatorResult.success()
                         : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token","Invalid audience",""));
-
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(withIssuer, withAudience));
         return decoder;
     }
@@ -70,14 +61,6 @@ public class SecurityConfig {
         var gac = new JwtGrantedAuthoritiesConverter();
         gac.setAuthoritiesClaimName("roles");
         gac.setAuthorityPrefix("ROLE_");
-
         return jwt -> new JwtAuthenticationToken(jwt, gac.convert(jwt), jwt.getSubject());
     }
-
-
-    @Bean
-    PasswordEncoder pe() {
-        return new BCryptPasswordEncoder();
-    }
-
 }

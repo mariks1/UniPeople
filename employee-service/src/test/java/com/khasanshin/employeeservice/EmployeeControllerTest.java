@@ -13,9 +13,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.Instant;
 import java.util.*;
@@ -36,13 +40,30 @@ class EmployeeControllerTest {
     @Autowired ObjectMapper mapper;
     @MockitoBean EmployeeService service;
 
+    @MockitoBean
+    JwtDecoder jwtDecoder;
+
+    private static RequestPostProcessor asHr() {
+        return SecurityMockMvcRequestPostProcessors
+                .jwt()
+                .authorities(new SimpleGrantedAuthority("ROLE_HR"))
+                .jwt(jwt -> jwt.claim("roles", List.of("HR")));
+    }
+
+    private static RequestPostProcessor asEmployee() {
+        return SecurityMockMvcRequestPostProcessors
+                .jwt()
+                .authorities(new SimpleGrantedAuthority("EMPLOYEE"))
+                .jwt(jwt -> jwt.claim("roles", List.of("EMPLOYEE")));
+    }
+
     @Test
     void get_ok() throws Exception {
         UUID id = UUID.randomUUID();
         var dto = EmployeeDto.builder().id(id).firstName("A").lastName("B").build();
         when(service.get(id)).thenReturn(dto);
 
-        mvc.perform(get("/api/v1/employees/{id}", id))
+        mvc.perform(get("/api/v1/employees/{id}", id).with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.first_name").value("A"));
@@ -52,7 +73,7 @@ class EmployeeControllerTest {
     void get_404() throws Exception {
         when(service.get(any())).thenThrow(new EntityNotFoundException());
 
-        mvc.perform(get("/api/v1/employees/{id}", UUID.randomUUID()))
+        mvc.perform(get("/api/v1/employees/{id}", UUID.randomUUID()).with(asHr()))
                 .andExpect(status().isNotFound());
     }
 
@@ -66,7 +87,8 @@ class EmployeeControllerTest {
 
         mvc.perform(post("/api/v1/employees")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(body)))
+                        .content(mapper.writeValueAsBytes(body))
+                        .with(asHr()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.first_name").value("A"));
@@ -78,7 +100,8 @@ class EmployeeControllerTest {
 
         mvc.perform(post("/api/v1/employees")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(bad)))
+                        .content(mapper.writeValueAsBytes(bad))
+                        .with(asHr()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -87,7 +110,8 @@ class EmployeeControllerTest {
         var body = Map.of("first_name","A","last_name","B");
 
         mvc.perform(post("/api/v1/employees")
-                        .content(mapper.writeValueAsBytes(body)))
+                        .content(mapper.writeValueAsBytes(body))
+                        .with(asHr()))
                 .andExpect(status().isUnsupportedMediaType());
     }
 
@@ -101,7 +125,8 @@ class EmployeeControllerTest {
 
         mvc.perform(put("/api/v1/employees/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(body)))
+                        .content(mapper.writeValueAsBytes(body))
+                        .with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.first_name").value("X"));
     }
@@ -112,7 +137,8 @@ class EmployeeControllerTest {
 
         mvc.perform(put("/api/v1/employees/{id}", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(Map.of("first_name","X"))))
+                        .content(mapper.writeValueAsBytes(Map.of("first_name","X")))
+                        .with(asHr()))
                 .andExpect(status().isNotFound());
     }
 
@@ -120,7 +146,7 @@ class EmployeeControllerTest {
     void delete_204() throws Exception {
         doNothing().when(service).delete(any());
 
-        mvc.perform(delete("/api/v1/employees/{id}", UUID.randomUUID()))
+        mvc.perform(delete("/api/v1/employees/{id}", UUID.randomUUID()).with(asHr()))
                 .andExpect(status().isNoContent());
     }
 
@@ -129,7 +155,7 @@ class EmployeeControllerTest {
         var id = UUID.randomUUID();
         org.mockito.Mockito.doThrow(new EntityNotFoundException()).when(service).delete(eq(id));
 
-        mvc.perform(delete("/api/v1/employees/{id}", id))
+        mvc.perform(delete("/api/v1/employees/{id}", id).with(asHr()))
                 .andExpect(status().isNotFound());
     }
 
@@ -139,7 +165,7 @@ class EmployeeControllerTest {
         var dto = EmployeeDto.builder().id(id).firstName("A").lastName("B").build();
         when(service.fire(id)).thenReturn(dto);
 
-        mvc.perform(post("/api/v1/employees/{id}/fire", id))
+        mvc.perform(post("/api/v1/employees/{id}/fire", id).with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()));
     }
@@ -150,7 +176,7 @@ class EmployeeControllerTest {
         var dto = EmployeeDto.builder().id(id).firstName("A").lastName("B").build();
         when(service.activate(id)).thenReturn(dto);
 
-        mvc.perform(post("/api/v1/employees/{id}/activate", id))
+        mvc.perform(post("/api/v1/employees/{id}/activate", id).with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()));
     }
@@ -160,7 +186,7 @@ class EmployeeControllerTest {
         var id = UUID.randomUUID();
         when(service.exists(id)).thenReturn(true);
 
-        mvc.perform(head("/api/v1/employees/{id}", id))
+        mvc.perform(head("/api/v1/employees/{id}", id).with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(""));
     }
@@ -170,7 +196,7 @@ class EmployeeControllerTest {
         var id = UUID.randomUUID();
         when(service.exists(id)).thenReturn(false);
 
-        mvc.perform(head("/api/v1/employees/{id}", id))
+        mvc.perform(head("/api/v1/employees/{id}", id).with(asHr()))
                 .andExpect(status().isNotFound());
     }
 
@@ -180,7 +206,7 @@ class EmployeeControllerTest {
         var page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 42);
         when(service.findAll(any())).thenReturn(page);
 
-        mvc.perform(get("/api/v1/employees").param("page","0").param("size","10"))
+        mvc.perform(get("/api/v1/employees").param("page","0").param("size","10").with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Total-Count", "42"))
                 .andExpect(jsonPath("$.content[0].first_name").value("A"))
@@ -204,7 +230,8 @@ class EmployeeControllerTest {
 
         mvc.perform(get("/api/v1/employees/stream")
                         .param("size","20")
-                        .param("cursor","2023-12-31T00:00:00Z"))
+                        .param("cursor","2023-12-31T00:00:00Z")
+                        .with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].id").value(id.toString()))
                 .andExpect(jsonPath("$.hasNext").value(true))

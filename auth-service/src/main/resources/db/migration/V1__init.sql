@@ -1,3 +1,5 @@
+create schema if not exists auth;
+
 CREATE TABLE IF NOT EXISTS app_user (
                                         id               UUID PRIMARY KEY,
                                         username         VARCHAR(64)  NOT NULL,

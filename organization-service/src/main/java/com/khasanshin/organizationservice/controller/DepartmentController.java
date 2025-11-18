@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -42,6 +43,7 @@ public class DepartmentController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<Page<DepartmentDto>> findAll(
           @PageableDefault(sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
     Page<DepartmentDto> page = service.findAll(pageable);
@@ -56,6 +58,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "404", description = "Не найден")
   })
   @GetMapping("/{id}")
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<DepartmentDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(service.get(id));
   }
@@ -66,6 +69,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<DepartmentDto> create(@Valid @RequestBody CreateDepartmentDto body) {
     var created = service.create(body);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -77,6 +81,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "404", description = "Не найден")
   })
   @PutMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<DepartmentDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateDepartmentDto body) {
     return ResponseEntity.ok(service.update(id, body));
@@ -89,6 +94,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "409", description = "Есть связанные данные")
   })
   @DeleteMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     service.delete(id);
     return ResponseEntity.noContent().build();
@@ -100,6 +106,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "404", description = "Департамент или сотрудник не найден")
   })
   @PutMapping("/{id}/head/{employeeId}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<DepartmentDto> setHead(
       @PathVariable("id") UUID id, @PathVariable("employeeId") UUID employeeId) {
     DepartmentDto dto = service.setHead(id, employeeId);
@@ -112,6 +119,7 @@ public class DepartmentController {
     @ApiResponse(responseCode = "404", description = "Департамент не найден")
   })
   @DeleteMapping("/{id}/head")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<Void> removeHead(@PathVariable("id") UUID id) {
     service.removeHead(id);
     return ResponseEntity.noContent().build();
@@ -129,6 +137,7 @@ public class DepartmentController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/{id}/employees")
+  @PreAuthorize("@perm.canManageDept(authentication,#id)")
   public ResponseEntity<Page<Object>> listEmployees(
       @PathVariable("id") UUID id, Pageable pageable) {
     HttpHeaders headers = new HttpHeaders();
@@ -144,6 +153,7 @@ public class DepartmentController {
           @ApiResponse(responseCode = "404", description = "Департамент не найден")
   })
   @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<Void> head(@PathVariable("id") UUID id) {
     return service.exists(id)
             ? ResponseEntity.ok().build()
@@ -158,6 +168,7 @@ public class DepartmentController {
           @ApiResponse(responseCode = "204", description = "Готово")
   })
   @DeleteMapping("/head/by-employee/{employeeId}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<Void> clearHeadByEmployee(@PathVariable("employeeId") UUID employeeId) {
     int affected = service.clearHeadByEmployee(employeeId);
     HttpHeaders headers = new HttpHeaders();

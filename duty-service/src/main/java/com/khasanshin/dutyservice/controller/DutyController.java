@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,6 +38,7 @@ public class DutyController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<Page<DutyDto>> findAll(Pageable pageable) {
     Page<DutyDto> page = service.findAll(pageable);
     HttpHeaders headers = new HttpHeaders();
@@ -50,6 +52,7 @@ public class DutyController {
     @ApiResponse(responseCode = "404", description = "Обязанность не найдена")
   })
   @GetMapping("/{id}")
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<DutyDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(service.get(id));
   }
@@ -60,6 +63,7 @@ public class DutyController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<DutyDto> create(@Valid @RequestBody CreateDutyDto dto) {
     DutyDto created = service.create(dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -72,6 +76,7 @@ public class DutyController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PutMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<DutyDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateDutyDto dto) {
     return ResponseEntity.ok(service.update(id, dto));
@@ -84,6 +89,7 @@ public class DutyController {
     @ApiResponse(responseCode = "409", description = "Есть связанные назначения")
   })
   @DeleteMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     service.delete(id);
     return ResponseEntity.noContent().build();
@@ -100,6 +106,7 @@ public class DutyController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/{id}/assignments")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Page<DutyAssignmentDto>> listAssignments(
       @PathVariable("id") UUID id, Pageable pageable) {
     Page<DutyAssignmentDto> page = service.listAssignments(id, pageable);
@@ -119,6 +126,7 @@ public class DutyController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/departments/{id}/assignments")
+  @PreAuthorize("@perm.canManageDept(authentication,#departmentId)")
   public ResponseEntity<Page<DutyAssignmentDto>> listDutyAssignmentsByDepartment(
       @PathVariable("id") UUID departmentId, Pageable pageable) {
 
@@ -138,6 +146,7 @@ public class DutyController {
     @ApiResponse(responseCode = "409", description = "Уже назначено (уникальный ключ)"),
   })
   @PostMapping("/departments/{departmentId}/assignments")
+  @PreAuthorize("@perm.canManageDept(authentication,#departmentId)")
   public ResponseEntity<DutyAssignmentDto> assignDutyToEmployee(
       @PathVariable("departmentId") UUID departmentId, @Valid @RequestBody AssignDutyDto req) {
 
@@ -153,6 +162,7 @@ public class DutyController {
         description = "Назначение не найдено или не в этом департаменте"),
   })
   @DeleteMapping("/departments/{departmentId}/assignments/{assignmentId}")
+  @PreAuthorize("@perm.canManageDept(authentication,#departmentId)")
   public ResponseEntity<Void> unassignDuty(
       @PathVariable("departmentId") UUID departmentId,
       @PathVariable("assignmentId") UUID assignmentId) {
@@ -172,6 +182,7 @@ public class DutyController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/{id}/duties/assignments")
+  @PreAuthorize("@perm.canManageDept(authentication,#departmentId)")
   public ResponseEntity<Page<DutyAssignmentDto>> listDutyAssignmentsLegacy(
       @PathVariable("id") UUID departmentId, Pageable pageable) {
 

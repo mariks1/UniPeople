@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -41,6 +42,7 @@ public class PositionController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<Page<PositionDto>> findAll(
       @RequestParam(name = "q", required = false) String q, Pageable pageable) {
     Page<PositionDto> page = positionService.findAll(q, pageable);
@@ -52,6 +54,7 @@ public class PositionController {
   @Operation(summary = "Получить должность по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<PositionDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(positionService.get(id));
   }
@@ -62,6 +65,7 @@ public class PositionController {
     @ApiResponse(responseCode = "409", description = "Название уже существует")
   })
   @PostMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<PositionDto> create(@Valid @RequestBody CreatePositionDto body) {
     PositionDto created = positionService.create(body);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -74,6 +78,7 @@ public class PositionController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности")
   })
   @PutMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<PositionDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdatePositionDto body) {
     return ResponseEntity.ok(positionService.update(id, body));
@@ -86,6 +91,7 @@ public class PositionController {
     @ApiResponse(responseCode = "409", description = "Есть связанные назначения")
   })
   @DeleteMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     positionService.delete(id);
     return ResponseEntity.noContent().build();
@@ -96,6 +102,7 @@ public class PositionController {
           @ApiResponse(responseCode = "404", description = "Позиция не найдена")
   })
   @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<Void> head(@PathVariable("id") UUID id) {
     return positionService.exists(id)
             ? ResponseEntity.ok().build()

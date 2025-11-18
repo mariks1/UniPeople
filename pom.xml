@@ -19,6 +19,8 @@
         <module>config-server</module>
         <module>employment-service</module>
         <module>organization-service</module>
+        <module>auth-service</module>
+
     </modules>
 
     <properties>

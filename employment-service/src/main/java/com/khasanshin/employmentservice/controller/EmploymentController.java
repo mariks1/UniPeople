@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -37,6 +38,7 @@ public class EmploymentController {
   @Operation(summary = "Получить назначение по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public Mono<EmploymentDto> get(@PathVariable("id") UUID id) {
       return employmentService.get(id);
   }
@@ -49,6 +51,7 @@ public class EmploymentController {
   })
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public Mono<EmploymentDto> create(@Valid @RequestBody CreateEmploymentDto body) { // TODO
       return employmentService.create(body);
   }
@@ -56,6 +59,7 @@ public class EmploymentController {
   @Operation(summary = "Обновить назначение (ставка/оклад/дата окончания)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public Mono<EmploymentDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateEmploymentDto body) {
       return employmentService.update(id, body);
@@ -64,6 +68,7 @@ public class EmploymentController {
   @Operation(summary = "Закрыть назначение (endDate, status=CLOSED)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/close")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public Mono<EmploymentDto> close(
       @PathVariable("id") UUID id, @Valid @RequestBody(required = false) CloseEmploymentDto body) {
       return employmentService.close(id, body);
@@ -78,6 +83,7 @@ public class EmploymentController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication,#employeeId)")
   public Flux<EmploymentDto> listByEmployee(
           @PathVariable("employeeId") UUID employeeId,
           @RequestParam(name = "page", defaultValue = "0") int page,
@@ -106,6 +112,7 @@ public class EmploymentController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/by-department/{departmentId}")
+  @PreAuthorize("@perm.canManageDept(authentication,#departmentId)")
   public Flux<EmploymentDto> listByDepartment(
           @PathVariable("departmentId") UUID departmentId,
           @RequestParam(name = "active", defaultValue = "true") boolean active,

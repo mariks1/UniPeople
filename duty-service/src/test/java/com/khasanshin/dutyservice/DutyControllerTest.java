@@ -17,9 +17,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 import java.util.Map;
@@ -39,8 +43,26 @@ class DutyControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
 
-    @MockitoBean DutyService dutyService;
-    @MockitoBean DutyAssignmentService assignmentService;
+    @MockitoBean
+    DutyService dutyService;
+    @MockitoBean
+    DutyAssignmentService assignmentService;
+    @MockitoBean
+    JwtDecoder jwtDecoder;
+
+    private static RequestPostProcessor asHr() {
+        return SecurityMockMvcRequestPostProcessors
+                .jwt()
+                .authorities(new SimpleGrantedAuthority("ROLE_HR"))
+                .jwt(jwt -> jwt.claim("roles", List.of("HR")));
+    }
+
+    private static RequestPostProcessor asEmployee() {
+        return SecurityMockMvcRequestPostProcessors
+                .jwt()
+                .authorities(new SimpleGrantedAuthority("EMPLOYEE"))
+                .jwt(jwt -> jwt.claim("roles", List.of("EMPLOYEE")));
+    }
 
     @Test
     void findAll_200_withHeader() throws Exception {
@@ -53,7 +75,7 @@ class DutyControllerTest {
         var page = new PageImpl<>(List.of(dto), PageRequest.of(0, 10), 1);
         when(dutyService.findAll(any())).thenReturn(page);
 
-        mvc.perform(get("/api/v1/duty").param("page","0").param("size","10"))
+        mvc.perform(get("/api/v1/duty").param("page","0").param("size","10").with(asEmployee()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Total-Count", "1"))
                 .andExpect(jsonPath("$.totalElements").value(1))
@@ -66,7 +88,7 @@ class DutyControllerTest {
         var dto = DutyDto.builder().id(id).code("D-001").name("Safety").build();
         when(dutyService.get(id)).thenReturn(dto);
 
-        mvc.perform(get("/api/v1/duty/{id}", id))
+        mvc.perform(get("/api/v1/duty/{id}", id).with(asEmployee()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.name").value("Safety"));
@@ -75,7 +97,7 @@ class DutyControllerTest {
     @Test
     void get_404() throws Exception {
         when(dutyService.get(any())).thenThrow(new jakarta.persistence.EntityNotFoundException());
-        mvc.perform(get("/api/v1/duty/{id}", UUID.randomUUID()))
+        mvc.perform(get("/api/v1/duty/{id}", UUID.randomUUID()).with(asEmployee()))
                 .andExpect(status().isNotFound());
     }
 
@@ -94,7 +116,8 @@ class DutyControllerTest {
 
         mvc.perform(post("/api/v1/duty")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(req)))
+                        .content(mapper.writeValueAsBytes(req))
+                        .with(asHr()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(created.getId().toString()))
                 .andExpect(jsonPath("$.code").value("D-002"));
@@ -106,7 +129,8 @@ class DutyControllerTest {
 
         mvc.perform(post("/api/v1/duty")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(bad)))
+                        .content(mapper.writeValueAsBytes(bad))
+                        .with(asHr()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -114,7 +138,8 @@ class DutyControllerTest {
     void create_415_whenNoContentType() throws Exception {
         var anyBody = Map.of("code","D-003","name","X");
         mvc.perform(post("/api/v1/duty")
-                        .content(mapper.writeValueAsBytes(anyBody)))
+                        .content(mapper.writeValueAsBytes(anyBody))
+                        .with(asHr()))
                 .andExpect(status().isUnsupportedMediaType());
     }
 
@@ -128,14 +153,15 @@ class DutyControllerTest {
 
         mvc.perform(put("/api/v1/duty/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(req)))
+                        .content(mapper.writeValueAsBytes(req))
+                        .with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Updated name"));
     }
 
     @Test
     void delete_204() throws Exception {
-        mvc.perform(delete("/api/v1/duty/{id}", UUID.randomUUID()))
+        mvc.perform(delete("/api/v1/duty/{id}", UUID.randomUUID()).with(asHr()))
                 .andExpect(status().isNoContent());
     }
 
@@ -152,7 +178,8 @@ class DutyControllerTest {
         when(dutyService.listAssignments(any(), any())).thenReturn(page);
 
         mvc.perform(get("/api/v1/duty/{id}/assignments", UUID.randomUUID())
-                        .param("page", "0").param("size", "20"))
+                        .param("page", "0").param("size", "20")
+                        .with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Total-Count", "1"))
                 .andExpect(jsonPath("$.content[0].id").value(a.getId().toString()));
@@ -171,7 +198,8 @@ class DutyControllerTest {
         when(assignmentService.list(any(), any())).thenReturn(page);
 
         mvc.perform(get("/api/v1/duty/departments/{id}/assignments", UUID.randomUUID())
-                        .param("page","0").param("size","10"))
+                        .param("page","0").param("size","10")
+                        .with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Total-Count", "1"))
                 .andExpect(jsonPath("$.content[0].id").value(a.getId().toString()));
@@ -197,7 +225,8 @@ class DutyControllerTest {
 
         mvc.perform(post("/api/v1/duty/departments/{departmentId}/assignments", deptId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(req)))
+                        .content(mapper.writeValueAsBytes(req))
+                        .with(asHr()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(created.getId().toString()));
     }
@@ -205,7 +234,7 @@ class DutyControllerTest {
     @Test
     void unassign_204() throws Exception {
         mvc.perform(delete("/api/v1/duty/departments/{departmentId}/assignments/{assignmentId}",
-                        UUID.randomUUID(), UUID.randomUUID()))
+                        UUID.randomUUID(), UUID.randomUUID()).with(asHr()))
                 .andExpect(status().isNoContent());
     }
 
@@ -222,7 +251,8 @@ class DutyControllerTest {
         when(assignmentService.list(any(), any())).thenReturn(page);
 
         mvc.perform(get("/api/v1/duty/{id}/duties/assignments", UUID.randomUUID())
-                        .param("page","0").param("size","5"))
+                        .param("page","0").param("size","5")
+                        .with(asHr()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Total-Count", "1"))
                 .andExpect(jsonPath("$.content[0].id").value(a.getId().toString()));

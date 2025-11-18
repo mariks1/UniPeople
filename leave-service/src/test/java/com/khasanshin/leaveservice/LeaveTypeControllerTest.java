@@ -6,12 +6,14 @@ import com.khasanshin.leaveservice.dto.LeaveTypeDto;
 import com.khasanshin.leaveservice.dto.UpdateLeaveTypeDto;
 import com.khasanshin.leaveservice.exception.GlobalExceptionHandler;
 import com.khasanshin.leaveservice.service.LeaveService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,6 +26,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
 @WebFluxTest(controllers = LeaveTypeController.class)
 @Import(GlobalExceptionHandler.class)
@@ -34,6 +38,16 @@ class LeaveTypeControllerTest {
 
     @MockitoBean
     LeaveService service;
+
+    @BeforeEach
+    void mockJwtDefault() {
+        web = web.mutateWith(
+                mockJwt()
+                        .authorities(new SimpleGrantedAuthority("ROLE_HR"))
+                        .jwt(j -> j.claim("roles", List.of("HR")))
+        )
+        .mutateWith(csrf());
+    }
 
     @Test
     void list_200_withHeaderAndBody() {

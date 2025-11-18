@@ -13,6 +13,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -27,6 +28,7 @@ public class FacultyController {
   @Operation(summary = "Получить факультет по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
+  @PreAuthorize("isAuthenticated()")
   public ResponseEntity<FacultyDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(service.get(id));
   }
@@ -37,6 +39,7 @@ public class FacultyController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<FacultyDto> create(@Valid @RequestBody CreateFacultyDto dto) {
     var saved = service.create(dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(saved);
@@ -45,6 +48,7 @@ public class FacultyController {
   @Operation(summary = "Обновить факультет")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN')")
   public ResponseEntity<FacultyDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateFacultyDto body) {
     return ResponseEntity.ok(service.update(id, body));

@@ -5,6 +5,7 @@ import com.khasanshin.employmentservice.controller.EmploymentController;
 import com.khasanshin.employmentservice.dto.*;
 import com.khasanshin.employmentservice.service.EmploymentService;
 import com.khasanshin.employmentservice.exception.GlobalExceptionHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -13,9 +14,13 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -24,6 +29,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 
 @ActiveProfiles("test")
 @WebFluxTest(controllers = EmploymentController.class)
@@ -34,6 +41,16 @@ class EmploymentControllerTest {
     @Autowired ObjectMapper mapper;
 
     @MockitoBean EmploymentService service;
+
+    @BeforeEach
+    void mockJwtDefault() {
+        webTestClient = webTestClient.mutateWith(
+                mockJwt()
+                        .authorities(new SimpleGrantedAuthority("ROLE_HR"))
+                        .jwt(j -> j.claim("roles", List.of("HR")))
+        )
+                .mutateWith(csrf());
+    }
 
     @Test
     void get_200() {
