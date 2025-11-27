@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -44,20 +45,22 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404", description = "Тип не найден")
   })
   @PostMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication, T(java.util.UUID).fromString(#id.toString()))")
   public Mono<LeaveRequestDto> create(@Valid @RequestBody CreateLeaveRequestDto body) {
     return service.create(body);
   }
 
   @Operation(summary = "Обновить заявку (DRAFT/PENDING)")
   @ApiResponses({
-    @ApiResponse(responseCode = "200"),
+    @ApiResponse( responseCode = "200"),
     @ApiResponse(responseCode = "400"),
     @ApiResponse(responseCode = "404")
   })
   @PatchMapping("/{id}")
-  public Mono<ResponseEntity<LeaveRequestDto>> update(
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication, T(java.util.UUID).fromString(#id.toString()))")
+  public Mono<LeaveRequestDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateLeaveRequestDto body) {
-    return service.update(id, body).map(ResponseEntity::ok);
+    return service.update(id, body);
   }
 
   @Operation(summary = "Одобрить заявку")
@@ -67,6 +70,7 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404")
   })
   @PostMapping("/{id}/approve")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR','DEPT_HEAD')")
   public Mono<LeaveRequestDto> approve(
       @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
     return service.approve(id, body);
@@ -79,6 +83,7 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404")
   })
   @PostMapping("/{id}/reject")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR','DEPT_HEAD')")
   public Mono<LeaveRequestDto> reject(
       @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
     return service.reject(id, body);
@@ -91,6 +96,7 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404")
   })
   @PostMapping("/{id}/cancel")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication, T(java.util.UUID).fromString(#id.toString()))")
   public Mono<LeaveRequestDto> cancel(@PathVariable("id") UUID id) {
     return service.cancel(id);
   }
@@ -104,6 +110,7 @@ public class LeaveRequestController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication,#employeeId)")
   public Flux<LeaveRequestDto> byEmployee(
           @PathVariable("employeeId") UUID employeeId, Pageable p, ServerHttpResponse response) {
     return service.countLeaveByEmployee(employeeId)
@@ -121,6 +128,7 @@ public class LeaveRequestController {
               description = "Общее количество записей",
               schema = @Schema(type = "integer")))
   @GetMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public Flux<LeaveRequestDto> byStatus(
           @RequestParam("status") LeaveRequest.Status status, Pageable p, ServerHttpResponse response) {
     return service.countLeaveByStatus(status)
