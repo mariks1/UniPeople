@@ -1,7 +1,11 @@
 .git
 .gitignore
+target
+**/target
 **/*.iml
 .idea
 .vscode
 node_modules
 .DS_Store
+*.iml
+docker-compose.yml
