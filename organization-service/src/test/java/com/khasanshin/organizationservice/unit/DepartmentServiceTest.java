@@ -128,10 +128,17 @@ class DepartmentServiceTest {
   }
 
   @Test
-  void setHead_remoteUnavailable_mapsTo503_viaFallback() {
+  void setHead_remoteUnavailable_bubblesUp() {
+    UUID depId = UUID.randomUUID();
+    UUID empId = UUID.randomUUID();
+
+    when(departmentRepository.findById(depId)).thenReturn(Optional.of(new Department()));
     doThrow(new RemoteServiceUnavailableException("employee-service unavailable", null))
-            .when(employeeVerifier).ensureEmployeeExists(UUID.randomUUID());
+            .when(employeeVerifier).ensureEmployeeExists(eq(empId)); // match the actual arg
+    assertThrows(RemoteServiceUnavailableException.class, () -> service.setHead(depId, empId));
+    verify(employeeVerifier).ensureEmployeeExists(empId); // optional, proves invocation
   }
+
 
   @Test
   void delete_ok_nullsHeadAndDeletes() {
