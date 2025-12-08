@@ -7,12 +7,14 @@ import java.util.UUID;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
+import org.springframework.data.annotation.Id;
 
 @Data
 @Builder
 @Jacksonized
 public class FileDto {
 
+    @Id
     UUID id;
 
     @JsonAlias("owner_id")

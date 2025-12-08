@@ -8,20 +8,31 @@ import com.khasanshin.fileservice.dto.event.FileUploadedEvent;
 import com.khasanshin.fileservice.entity.StoredFile;
 import com.khasanshin.fileservice.mapper.FileMapper;
 import com.khasanshin.fileservice.repository.StoredFileRepository;
-import java.nio.file.*;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+
+import java.io.InputStream;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -31,33 +42,30 @@ public class FileService {
     private final StoredFileRepository repository;
     private final FileMapper mapper;
     private final FileEventPublisher eventPublisher;
+    private final S3Client s3Client;
 
-    @Value("${files.storage-dir:/data/files}")
-    private String storageDir;
+    @Value("${s3.bucket}")
+    private String bucketName;
 
     @Transactional
     public Mono<FileDto> upload(FilePart file, CreateFileMetaDto meta) {
 
-        UUID fileId = UUID.randomUUID();
         Instant now = Instant.now();
-
         String ownerType = Optional.ofNullable(meta.getOwnerType()).orElse("EMPLOYEE");
         String category = Optional.ofNullable(meta.getCategory()).orElse("DOCUMENT");
 
-        return saveToDisk(file, fileId)
-                .flatMap(path -> {
+        UUID pathId = UUID.randomUUID();
+
+        return uploadToS3(file, pathId)
+                .flatMap(objInfo -> {
                     StoredFile e = StoredFile.builder()
-                            .id(fileId)
                             .ownerId(meta.getOwnerId())
                             .ownerType(ownerType)
                             .category(category)
                             .originalName(file.filename())
-                            .contentType(
-                                    Optional.ofNullable(file.headers().getContentType())
-                                            .map(Object::toString)
-                                            .orElse("application/octet-stream"))
-                            .size(getContentLength(file))
-                            .storagePath(path.toString())
+                            .contentType(objInfo.contentType())
+                            .size(objInfo.size())
+                            .storagePath(objInfo.key())
                             .uploadedAt(now)
                             .build();
 
@@ -84,8 +92,16 @@ public class FileService {
     }
 
     public Mono<Resource> loadAsResource(StoredFile meta) {
-        Path path = Paths.get(meta.getStoragePath());
-        return Mono.just(new FileSystemResource(path));
+        return Mono.fromCallable(() -> {
+                    GetObjectRequest req = GetObjectRequest.builder()
+                            .bucket(bucketName)
+                            .key(meta.getStoragePath())
+                            .build();
+                    ResponseInputStream<GetObjectResponse> s3Object =
+                            s3Client.getObject(req);
+                    return (Resource) new InputStreamResource(s3Object);
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @Transactional
@@ -93,9 +109,9 @@ public class FileService {
         return repository.findById(id)
                 .switchIfEmpty(Mono.error(new NoSuchElementException("file not found")))
                 .flatMap(e ->
-                        repository.deleteById(id)
+                        deleteFromS3(e.getStoragePath())
+                                .then(repository.deleteById(id))
                                 .doOnSuccess(v -> {
-                                    tryDeleteFromDisk(e.getStoragePath());
                                     FileDeletedEvent event = FileDeletedEvent.builder()
                                             .fileId(e.getId())
                                             .ownerId(e.getOwnerId())
@@ -114,11 +130,16 @@ public class FileService {
                 ? repository.findAllByOrderByUploadedAtDesc()
                 : repository.findByOwnerIdOrderByUploadedAtDesc(ownerId);
 
-        return src.skip((long) p * s).take(s).map(mapper::toDto);
+        return src
+                .skip((long) p * s)
+                .take(s)
+                .map(mapper::toDto);
     }
 
     public Mono<Long> count(UUID ownerId) {
-        return ownerId == null ? repository.count() : repository.countByOwnerId(ownerId);
+        return ownerId == null
+                ? repository.count()
+                : repository.countByOwnerId(ownerId);
     }
 
     public Mono<FileStreamResponseDto> stream(UUID ownerId, Instant cursor, int size) {
@@ -148,37 +169,53 @@ public class FileService {
                 });
     }
 
-    private Mono<Path> saveToDisk(FilePart file, UUID fileId) {
-        return Mono.fromCallable(() -> {
-                    LocalDate now = LocalDate.now();
-                    Path dir = Paths.get(
-                            storageDir,
-                            String.valueOf(now.getYear()),
-                            String.valueOf(now.getMonthValue()),
-                            String.valueOf(now.getDayOfMonth())
-                    );
-                    Files.createDirectories(dir);
-                    String safeName = file.filename().replaceAll("[^a-zA-Z0-9\\.\\-_]", "_");
-                    return dir.resolve(fileId + "-" + safeName);
+
+    private record S3ObjectInfo(String key, long size, String contentType) {}
+
+    private Mono<S3ObjectInfo> uploadToS3(FilePart file, UUID fileId) {
+        return DataBufferUtils.join(file.content())
+                .flatMap(dataBuffer -> {
+                    long size = dataBuffer.readableByteCount();
+                    String contentType = Optional.ofNullable(file.headers().getContentType())
+                            .map(Object::toString)
+                            .orElse("application/octet-stream");
+
+                    return Mono.fromCallable(() -> {
+                                LocalDate now = LocalDate.now();
+                                String safeName = file.filename().replaceAll("[^a-zA-Z0-9\\.\\-_]", "_");
+                                String key = "%d/%02d/%02d/%s-%s".formatted(
+                                        now.getYear(), now.getMonthValue(), now.getDayOfMonth(),
+                                        fileId, safeName);
+
+                                PutObjectRequest req = PutObjectRequest.builder()
+                                        .bucket(bucketName)
+                                        .key(key)
+                                        .contentType(contentType)
+                                        .contentLength(size)
+                                        .build();
+
+                                try (InputStream is = dataBuffer.asInputStream(true)) {
+                                    s3Client.putObject(req, RequestBody.fromInputStream(is, size));
+                                }
+
+                                return new S3ObjectInfo(key, size, contentType);
+                            })
+                            .subscribeOn(Schedulers.boundedElastic());
+                });
+    }
+
+    private Mono<Void> deleteFromS3(String key) {
+        return Mono.fromRunnable(() -> {
+                    try {
+                        s3Client.deleteObject(DeleteObjectRequest.builder()
+                                .bucket(bucketName)
+                                .key(key)
+                                .build());
+                    } catch (Exception e) {
+                        log.warn("Failed to delete S3 object {}", key, e);
+                    }
                 })
-                .flatMap(path -> file.transferTo(path).thenReturn(path));
-    }
-
-    private void tryDeleteFromDisk(String storagePath) {
-        try {
-            Files.deleteIfExists(Paths.get(storagePath));
-        } catch (Exception e) {
-            log.warn("Failed to delete {}", storagePath, e);
-        }
-    }
-
-    private long getContentLength(FilePart filePart) {
-        var lengths = filePart.headers().get("Content-Length");
-        if (lengths != null && !lengths.isEmpty()) {
-            try {
-                return Long.parseLong(lengths.get(0));
-            } catch (NumberFormatException ignored) {}
-        }
-        return -1L;
+                .subscribeOn(Schedulers.boundedElastic())
+                .then();
     }
 }

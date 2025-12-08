@@ -1,7 +1,8 @@
 CREATE SCHEMA IF NOT EXISTS file;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS file.files (
-                                          id            UUID PRIMARY KEY,
+                                          id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                                           owner_id      UUID        NOT NULL,
                                           owner_type    VARCHAR(50) NOT NULL,
     category      VARCHAR(50) NOT NULL,
