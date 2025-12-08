@@ -133,5 +133,22 @@ services:
       config-server:
         condition: service_healthy
 
+  file-service:
+    build:
+      context: .
+      dockerfile: file-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    volumes:
+      - files-data:/data/files
+
 volumes:
   pg-data:
+  files-data:
