@@ -1,5 +1,6 @@
 package com.khasanshin.leaveservice.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component("perm")
+@Slf4j
 public class PermissionGuard {
 
     private boolean hasRole(Authentication auth, String role) {

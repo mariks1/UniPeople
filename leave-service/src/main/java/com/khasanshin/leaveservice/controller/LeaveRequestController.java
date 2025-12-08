@@ -15,10 +15,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -26,6 +28,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/v1/leave-requests")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "LeaveRequest", description = "Заявки на отпуск: создание, правка, согласование")
 public class LeaveRequestController {
 
@@ -45,10 +48,10 @@ public class LeaveRequestController {
     @ApiResponse(responseCode = "404", description = "Тип не найден")
   })
   @PostMapping
-  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication, T(java.util.UUID).fromString(#id.toString()))")
-  public Mono<LeaveRequestDto> create(@Valid @RequestBody CreateLeaveRequestDto body) {
-    return service.create(body);
-  }
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication, #body.employeeId)")
+  public Mono<LeaveRequestDto> create(@P("body") @Valid @RequestBody CreateLeaveRequestDto body) {
+      return service.create(body);
+    }
 
   @Operation(summary = "Обновить заявку (DRAFT/PENDING)")
   @ApiResponses({
