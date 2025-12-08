@@ -15,7 +15,9 @@ services:
       retries: 20
 
   eureka-server:
-    build: ./eureka-server
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
     ports: ["18761:18761"]
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:18761/actuator/health" ]
@@ -24,20 +26,24 @@ services:
       retries: 30
 
   config-server:
-    build: ./config-server
-    ports: [ "8888:8888" ]
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
+    ports: [ "18888:18888" ]
     depends_on:
       eureka-server:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:8888/actuator/health" ]
+      test: [ "CMD", "wget", "-qO-", "http://localhost:18888/actuator/health" ]
       interval: 5s
       timeout: 3s
       retries: 30
 
   api-gateway:
-    build: ./api-gateway
-    ports: ["8080:8080"]
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports: ["18080:18080"]
     environment:
       SPRING_PROFILES_ACTIVE: dev
     depends_on:
@@ -46,8 +52,21 @@ services:
       config-server:
         condition: service_healthy
 
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+
   organization-service:
-    build: ./organization-service
+    build:
+      context: .
+      dockerfile: organization-service/Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: dev
     depends_on:
@@ -59,7 +78,9 @@ services:
         condition: service_healthy
 
   employee-service:
-    build: ./employee-service
+    build:
+      context: .
+      dockerfile: employee-service/Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: dev
     depends_on:
@@ -71,7 +92,9 @@ services:
         condition: service_healthy
 
   employment-service:
-    build: ./employment-service
+    build:
+      context: .
+      dockerfile: employment-service/Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: dev
     depends_on:
@@ -83,7 +106,9 @@ services:
         condition: service_healthy
 
   duty-service:
-    build: ./duty-service
+    build:
+      context: .
+      dockerfile: duty-service/Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: dev
     depends_on:
@@ -95,7 +120,9 @@ services:
         condition: service_healthy
 
   leave-service:
-    build: ./leave-service
+    build:
+      context: .
+      dockerfile: leave-service/Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: dev
     depends_on:

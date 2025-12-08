@@ -1,4 +1,15 @@
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+
+WORKDIR /app
+
+COPY . .
+
+RUN mvn -pl organization-service -am package -DskipTests
+
 FROM eclipse-temurin:21-jre
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} app.jar
-ENTRYPOINT ["java","-jar","/app.jar"]
+
+WORKDIR /app
+
+COPY --from=build /app/organization-service/target/*.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

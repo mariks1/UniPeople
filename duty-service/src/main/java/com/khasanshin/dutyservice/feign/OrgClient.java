@@ -1,5 +1,6 @@
 package com.khasanshin.dutyservice.feign;
 
+import com.khasanshin.dutyservice.config.FeignAuthConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -8,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.UUID;
 
-@FeignClient(name = "organization-service", path = "/api/v1/departments")
+@FeignClient(name = "organization-service", path = "/api/v1/departments", configuration = FeignAuthConfig.class)
 public interface OrgClient {
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
