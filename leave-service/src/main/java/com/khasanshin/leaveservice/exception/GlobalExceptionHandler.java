@@ -6,12 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.ServerWebInputException;
 
 import java.util.HashMap;
@@ -52,6 +54,21 @@ public class GlobalExceptionHandler {
         ex.getFieldErrors().forEach(fe -> errors.put(fe.getField(), fe.getDefaultMessage()));
         ex.getGlobalErrors().forEach(ge -> errors.put(ge.getObjectName(), ge.getDefaultMessage()));
         pd.setProperty("errors", errors);
+        return pd;
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(
+            AccessDeniedException ex,
+            ServerWebExchange exchange
+    ) {
+        String path = exchange.getRequest().getURI().getPath();
+        log.warn("Access denied for {}: {}", path, ex.getMessage());
+
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        pd.setTitle("Access denied");
+        pd.setDetail("Недостаточно прав для доступа к ресурсу");
+        pd.setProperty("path", path);
         return pd;
     }
 

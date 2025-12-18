@@ -12,9 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,13 +37,32 @@ class FacultyControllerTest {
 
     @MockitoBean FacultyService service;
 
+    @MockitoBean
+    JwtDecoder jwtDecoder;
+
+    private static RequestPostProcessor asEmployee() {
+        return SecurityMockMvcRequestPostProcessors
+                .jwt()
+                .authorities(new SimpleGrantedAuthority("EMPLOYEE"))
+                .jwt(jwt -> jwt.claim("roles", List.of("EMPLOYEE")));
+    }
+
+    private static RequestPostProcessor asOrgAdmin() {
+        return SecurityMockMvcRequestPostProcessors
+                .jwt()
+                .authorities(new SimpleGrantedAuthority("ORG_ADMIN"))
+                .jwt(jwt -> jwt.claim("roles", List.of("ORG_ADMIN")));
+    }
+
+
     @Test
     void get_200() throws Exception {
         var id = UUID.randomUUID();
         var dto = FacultyDto.builder().id(id).name("IT").build();
         when(service.get(id)).thenReturn(dto);
 
-        mvc.perform(get("/api/v1/faculties/{id}", id))
+        mvc.perform(get("/api/v1/faculties/{id}", id)
+                        .with(asEmployee()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()));
     }
@@ -46,7 +70,8 @@ class FacultyControllerTest {
     @Test
     void get_404() throws Exception {
         when(service.get(any())).thenThrow(new EntityNotFoundException());
-        mvc.perform(get("/api/v1/faculties/{id}", UUID.randomUUID()))
+        mvc.perform(get("/api/v1/faculties/{id}", UUID.randomUUID())
+                        .with(asEmployee()))
                 .andExpect(status().isNotFound());
     }
 
@@ -58,7 +83,8 @@ class FacultyControllerTest {
 
         mvc.perform(post("/api/v1/faculties")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(body)))
+                        .content(mapper.writeValueAsBytes(body))
+                        .with(asOrgAdmin()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(saved.getId().toString()));
     }
@@ -68,7 +94,8 @@ class FacultyControllerTest {
         var bad = Map.of("name", "");
         mvc.perform(post("/api/v1/faculties")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(bad)))
+                        .content(mapper.writeValueAsBytes(bad))
+                        .with(asOrgAdmin()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -81,7 +108,8 @@ class FacultyControllerTest {
 
         mvc.perform(put("/api/v1/faculties/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsBytes(req)))
+                        .content(mapper.writeValueAsBytes(req))
+                        .with(asOrgAdmin()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("NewFaculty"));
     }

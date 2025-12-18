@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -43,6 +44,7 @@ public class EmployeeController {
               description = "Общее число записей",
               schema = @Schema(type = "integer")))
   @GetMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Page<EmployeeDto>> findAll(Pageable pageable) {
     Page<EmployeeDto> employees = employeeService.findAll(pageable);
     HttpHeaders headers = new HttpHeaders();
@@ -68,6 +70,7 @@ public class EmployeeController {
         schema = @Schema(type = "integer", maximum = "50"))
   })
   @GetMapping("/stream")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Map<String, Object>> stream(
       @RequestParam(name = "cursor", required = false) Instant cursor,
       @RequestParam(name = "size", defaultValue = "20") int size) {
@@ -81,6 +84,7 @@ public class EmployeeController {
     @ApiResponse(responseCode = "404", description = "Не найден")
   })
   @GetMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication,#id)")
   public ResponseEntity<EmployeeDto> get(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(employeeService.get(id));
   }
@@ -91,6 +95,7 @@ public class EmployeeController {
     @ApiResponse(responseCode = "409", description = "Конфликт уникальности (code)")
   })
   @PostMapping
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<EmployeeDto> create(@Valid @RequestBody CreateEmployeeDto body) {
     var created = employeeService.create(body);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -99,6 +104,7 @@ public class EmployeeController {
   @Operation(summary = "Обновить сотрудника")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PutMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<EmployeeDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateEmployeeDto body) {
     return ResponseEntity.ok(employeeService.update(id, body));
@@ -107,6 +113,7 @@ public class EmployeeController {
   @Operation(summary = "Удалить сотрудника")
   @ApiResponses({@ApiResponse(responseCode = "204"), @ApiResponse(responseCode = "404")})
   @DeleteMapping("/{id}")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     employeeService.delete(id);
     return ResponseEntity.noContent().build();
@@ -115,6 +122,7 @@ public class EmployeeController {
   @Operation(summary = "Уволить сотрудника (status=FIRED)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/fire")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<EmployeeDto> fire(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(employeeService.fire(id));
   }
@@ -122,6 +130,7 @@ public class EmployeeController {
   @Operation(summary = "Активировать сотрудника (status=ACTIVE)")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @PostMapping("/{id}/activate")
+  @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Object> activate(@PathVariable("id") UUID id) {
     return ResponseEntity.ok(employeeService.activate(id));
   }
@@ -134,6 +143,7 @@ public class EmployeeController {
           @ApiResponse(responseCode = "200", description = "Сотрудник существует"),
           @ApiResponse(responseCode = "404", description = "Сотрудник не найден")
   })
+  @PreAuthorize("isAuthenticated()")
   @RequestMapping(method = RequestMethod.HEAD, value = "/{id}")
   public ResponseEntity<Void> head(@PathVariable("id") UUID id) {
     return employeeService.exists(id)
