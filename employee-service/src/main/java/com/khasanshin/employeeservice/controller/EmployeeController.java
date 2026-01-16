@@ -3,6 +3,7 @@ package com.khasanshin.employeeservice.controller;
 import com.khasanshin.employeeservice.dto.CreateEmployeeDto;
 import com.khasanshin.employeeservice.dto.EmployeeDto;
 import com.khasanshin.employeeservice.dto.UpdateEmployeeDto;
+import com.khasanshin.employeeservice.event.EmployeeEventPublisher;
 import com.khasanshin.employeeservice.service.EmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.*;
 public class EmployeeController {
 
   private final EmployeeService employeeService;
+  private final EmployeeEventPublisher publisher;
 
   @Operation(
       summary = "Список сотрудников (пагинация)",
@@ -98,6 +100,7 @@ public class EmployeeController {
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<EmployeeDto> create(@Valid @RequestBody CreateEmployeeDto body) {
     var created = employeeService.create(body);
+    publisher.publishEmployeeEvent("EMPLOYEE_CREATED", created.getId(), created);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
@@ -107,7 +110,9 @@ public class EmployeeController {
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<EmployeeDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateEmployeeDto body) {
-    return ResponseEntity.ok(employeeService.update(id, body));
+    var updated = employeeService.update(id, body);
+    publisher.publishEmployeeEvent("EMPLOYEE_CREATED", updated.getId(), updated);
+    return ResponseEntity.ok(updated);
   }
 
   @Operation(summary = "Удалить сотрудника")
@@ -124,7 +129,9 @@ public class EmployeeController {
   @PostMapping("/{id}/fire")
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<EmployeeDto> fire(@PathVariable("id") UUID id) {
-    return ResponseEntity.ok(employeeService.fire(id));
+    var fired = employeeService.fire(id);
+    publisher.publishEmployeeEvent("EMPLOYEE_CREATED", fired.getId(), fired);
+    return ResponseEntity.ok(fired);
   }
 
   @Operation(summary = "Активировать сотрудника (status=ACTIVE)")
@@ -132,7 +139,9 @@ public class EmployeeController {
   @PostMapping("/{id}/activate")
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Object> activate(@PathVariable("id") UUID id) {
-    return ResponseEntity.ok(employeeService.activate(id));
+    var activated = employeeService.activate(id);
+    publisher.publishEmployeeEvent("EMPLOYEE_CREATED", activated.getId(), activated);
+    return ResponseEntity.ok(activated);
   }
 
   @Operation(

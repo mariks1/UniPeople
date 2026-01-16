@@ -1,4 +1,4 @@
-package com.khasanshin.dutyservice.event;
+package com.khasanshin.leaveservice.event;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

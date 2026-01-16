@@ -77,6 +77,19 @@ public class DutyAssignmentService {
     assignmentRepo.delete(a);
   }
 
+  @Transactional
+  public DutyAssignmentDto unassignAndReturn(UUID departmentId, UUID assignmentId) {
+    DepartmentDutyAssignment a = assignmentRepo.findByIdAndDepartmentId(assignmentId, departmentId)
+            .orElseThrow(() -> new EntityNotFoundException("Assignment not found in department"));
+
+    DutyAssignmentDto dto = mapper.toDto(a);
+
+    assignmentRepo.delete(a);
+    assignmentRepo.flush();
+
+    return dto;
+  }
+
   void ensureDutyExists(UUID id) {
     if (!dutyRepo.existsById(id)) throw new EntityNotFoundException("duty " + id);
   }

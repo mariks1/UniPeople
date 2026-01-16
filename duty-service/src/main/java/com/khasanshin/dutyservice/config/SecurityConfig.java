@@ -63,6 +63,12 @@ public class SecurityConfig {
         var gac = new JwtGrantedAuthoritiesConverter();
         gac.setAuthoritiesClaimName("roles");
         gac.setAuthorityPrefix("ROLE_");
-        return jwt -> new JwtAuthenticationToken(jwt, gac.convert(jwt), jwt.getSubject());
+
+        return new Converter<Jwt, AbstractAuthenticationToken>() {
+            @Override
+            public AbstractAuthenticationToken convert(Jwt jwt) {
+                return new JwtAuthenticationToken(jwt, gac.convert(jwt), jwt.getSubject());
+            }
+        };
     }
 }

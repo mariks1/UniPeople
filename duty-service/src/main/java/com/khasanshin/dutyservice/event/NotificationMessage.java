@@ -1,4 +1,4 @@
-package com.khasanshin.employeeservice.event;
+package com.khasanshin.dutyservice.event;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

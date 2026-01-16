@@ -1,4 +1,4 @@
-package com.khasanshin.fileservice.config;
+package com.khasanshin.leaveservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
