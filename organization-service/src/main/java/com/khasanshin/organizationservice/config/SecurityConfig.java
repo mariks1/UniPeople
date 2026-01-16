@@ -63,4 +63,5 @@ public class SecurityConfig {
         gac.setAuthorityPrefix("ROLE_");
         return jwt -> new JwtAuthenticationToken(jwt, gac.convert(jwt), jwt.getSubject());
     }
+
 }
