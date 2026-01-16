@@ -26,7 +26,7 @@ public class SecurityConfig {
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt() // БЕЗ своих decoder'ов и converter'ов
+                        .jwt()
                 )
                 .build();
     }

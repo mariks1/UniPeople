@@ -3,8 +3,6 @@ package com.khasanshin.fileservice.service;
 import com.khasanshin.fileservice.dto.CreateFileMetaDto;
 import com.khasanshin.fileservice.dto.FileDto;
 import com.khasanshin.fileservice.dto.FileStreamResponseDto;
-import com.khasanshin.fileservice.dto.event.FileDeletedEvent;
-import com.khasanshin.fileservice.dto.event.FileUploadedEvent;
 import com.khasanshin.fileservice.entity.StoredFile;
 import com.khasanshin.fileservice.mapper.FileMapper;
 import com.khasanshin.fileservice.repository.StoredFileRepository;
@@ -41,7 +39,6 @@ public class FileService {
 
     private final StoredFileRepository repository;
     private final FileMapper mapper;
-    private final FileEventPublisher eventPublisher;
     private final S3Client s3Client;
 
     @Value("${s3.bucket}")
@@ -71,18 +68,6 @@ public class FileService {
 
                     return repository.save(e);
                 })
-                .doOnSuccess(saved -> {
-                    FileUploadedEvent event = FileUploadedEvent.builder()
-                            .fileId(saved.getId())
-                            .ownerId(saved.getOwnerId())
-                            .ownerType(saved.getOwnerType())
-                            .category(saved.getCategory())
-                            .originalName(saved.getOriginalName())
-                            .size(saved.getSize())
-                            .uploadedAt(saved.getUploadedAt())
-                            .build();
-                    eventPublisher.publishFileUploaded(event);
-                })
                 .map(mapper::toDto);
     }
 
@@ -110,16 +95,7 @@ public class FileService {
                 .switchIfEmpty(Mono.error(new NoSuchElementException("file not found")))
                 .flatMap(e ->
                         deleteFromS3(e.getStoragePath())
-                                .then(repository.deleteById(id))
-                                .doOnSuccess(v -> {
-                                    FileDeletedEvent event = FileDeletedEvent.builder()
-                                            .fileId(e.getId())
-                                            .ownerId(e.getOwnerId())
-                                            .ownerType(e.getOwnerType())
-                                            .category(e.getCategory())
-                                            .build();
-                                    eventPublisher.publishFileDeleted(event);
-                                }));
+                                .then(repository.deleteById(id)));
     }
 
     public Flux<FileDto> list(UUID ownerId, int page, int size) {
