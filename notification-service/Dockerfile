@@ -4,12 +4,12 @@ WORKDIR /app
 
 COPY . .
 
-RUN mvn -pl organization-service -am package -DskipTests
+RUN mvn -pl notification-service -am package -DskipTests
 
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-COPY --from=build /app/organization-service/target/*.jar app.jar
+COPY --from=build /app/notification-service/target/*.jar app.jar
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

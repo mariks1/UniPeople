@@ -1,10 +1,12 @@
-package com.khasanshin.dutyservice.config;
+package com.khasanshin.notificationservice.config;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 @Component("perm")
 public class PermissionGuard {
@@ -24,7 +26,7 @@ public class PermissionGuard {
         return out;
     }
 
-    private UUID employeeId(Authentication auth) {
+    public UUID employeeId(Authentication auth) {
         if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt)) return null;
         String v = jwt.getClaimAsString("employeeId");
         try { return v == null ? null : UUID.fromString(v); } catch (Exception e) { return null; }
@@ -40,5 +42,10 @@ public class PermissionGuard {
     public boolean hasAny(Authentication auth, String... roles) {
         for (String r : roles) if (hasRole(auth, r)) return true;
         return false;
+    }
+    public Set<String> roles(Authentication auth) {
+        if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt)) return Set.of();
+        var roles = jwt.getClaimAsStringList("roles");
+        return roles == null ? Set.of() : new java.util.HashSet<>(roles);
     }
 }

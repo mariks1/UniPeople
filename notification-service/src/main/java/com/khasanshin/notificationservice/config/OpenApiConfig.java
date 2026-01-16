@@ -1,4 +1,4 @@
-package com.khasanshin.organizationservice.config;
+package com.khasanshin.notificationservice.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -17,7 +17,7 @@ public class OpenApiConfig {
     public OpenAPI api() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Organization Service API")
+                        .title("Notification Service API")
                         .version("v1"))
                 .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
                 .components(new Components()

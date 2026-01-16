@@ -1,4 +1,4 @@
-package com.khasanshin.notificationservice.view;
+package com.khasanshin.notificationservice.mapper;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
