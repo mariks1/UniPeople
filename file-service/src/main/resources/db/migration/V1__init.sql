@@ -1,7 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS file;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE IF NOT EXISTS file.files (
+CREATE TABLE IF NOT EXISTS files (
                                           id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                                           owner_id      UUID        NOT NULL,
                                           owner_type    VARCHAR(50) NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS file.files (
     );
 
 CREATE INDEX IF NOT EXISTS idx_files_owner_id
-    ON file.files (owner_id);
+    ON files (owner_id);
 
 CREATE INDEX IF NOT EXISTS idx_files_uploaded_at
-    ON file.files (uploaded_at DESC);
+    ON files (uploaded_at DESC);
