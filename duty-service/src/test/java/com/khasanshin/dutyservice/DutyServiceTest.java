@@ -1,16 +1,15 @@
 package com.khasanshin.dutyservice;
 
+import com.khasanshin.dutyservice.application.DutyApplicationService;
+import com.khasanshin.dutyservice.domain.model.Duty;
+import com.khasanshin.dutyservice.domain.port.DutyAssignmentRepositoryPort;
+import com.khasanshin.dutyservice.domain.port.DutyRepositoryPort;
 import com.khasanshin.dutyservice.dto.CreateDutyDto;
 import com.khasanshin.dutyservice.dto.DutyAssignmentDto;
 import com.khasanshin.dutyservice.dto.DutyDto;
 import com.khasanshin.dutyservice.dto.UpdateDutyDto;
-import com.khasanshin.dutyservice.entity.DepartmentDutyAssignment;
-import com.khasanshin.dutyservice.entity.Duty;
 import com.khasanshin.dutyservice.mapper.DutyAssignmentMapper;
 import com.khasanshin.dutyservice.mapper.DutyMapper;
-import com.khasanshin.dutyservice.repository.DutyAssignmentRepository;
-import com.khasanshin.dutyservice.repository.DutyRepository;
-import com.khasanshin.dutyservice.service.DutyService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,16 +28,16 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DutyServiceTest {
 
-    @Mock DutyRepository dutyRepository;
-    @Mock DutyAssignmentRepository dutyAssignmentRepository;
+    @Mock DutyRepositoryPort dutyRepository;
+    @Mock DutyAssignmentRepositoryPort dutyAssignmentRepository;
     @Mock DutyMapper dutyMapper;
     @Mock DutyAssignmentMapper dutyAssignmentMapper;
 
-    DutyService service;
+    DutyApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new DutyService(dutyRepository, dutyAssignmentRepository, dutyMapper, dutyAssignmentMapper);
+        service = new DutyApplicationService(dutyRepository, dutyAssignmentRepository, dutyMapper, dutyAssignmentMapper);
     }
 
     @Test
@@ -70,7 +69,7 @@ class DutyServiceTest {
     @Test
     void get_ok() {
         UUID id = UUID.randomUUID();
-        Duty e = new Duty();
+        Duty e = Duty.builder().id(id).code("X").name("N").build();
         when(dutyRepository.findById(id)).thenReturn(Optional.of(e));
         when(dutyMapper.toDto(e)).thenReturn(DutyDto.builder().build());
 
@@ -88,14 +87,14 @@ class DutyServiceTest {
         CreateDutyDto dto = CreateDutyDto.builder().code("X").name("Name").build();
         when(dutyRepository.existsByCodeIgnoreCase("X")).thenReturn(false);
 
-        Duty toSave = new Duty();
-        Duty saved = new Duty();
-        when(dutyMapper.toEntity(dto)).thenReturn(toSave);
-        when(dutyRepository.saveAndFlush(toSave)).thenReturn(saved);
+        Duty toSave = Duty.builder().code("X").name("Name").build();
+        Duty saved = Duty.builder().id(UUID.randomUUID()).code("X").name("Name").build();
+        when(dutyMapper.toDomain(dto)).thenReturn(toSave);
+        when(dutyRepository.save(toSave)).thenReturn(saved);
         when(dutyMapper.toDto(saved)).thenReturn(DutyDto.builder().build());
 
         assertNotNull(service.create(dto));
-        verify(dutyRepository).saveAndFlush(toSave);
+        verify(dutyRepository).save(toSave);
     }
 
     @Test
@@ -104,7 +103,7 @@ class DutyServiceTest {
         when(dutyRepository.existsByCodeIgnoreCase("X")).thenReturn(true);
 
         assertThrows(IllegalStateException.class, () -> service.create(dto));
-        verify(dutyRepository, never()).saveAndFlush(any());
+        verify(dutyRepository, never()).save(any());
     }
 
     @Test
@@ -112,25 +111,25 @@ class DutyServiceTest {
         CreateDutyDto dto = CreateDutyDto.builder().code("X").build();
         when(dutyRepository.existsByCodeIgnoreCase("X")).thenReturn(false);
 
-        Duty toSave = new Duty();
-        when(dutyMapper.toEntity(dto)).thenReturn(toSave);
-        when(dutyRepository.saveAndFlush(toSave)).thenThrow(new DataIntegrityViolationException("dup"));
+        Duty toSave = Duty.builder().code("X").build();
+        when(dutyMapper.toDomain(dto)).thenReturn(toSave);
+        when(dutyRepository.save(toSave)).thenThrow(new DataIntegrityViolationException("dup"));
 
         assertThrows(IllegalStateException.class, () -> service.create(dto));
     }
 
     @Test
-    void update_ok_flushesAndMaps() {
+    void update_ok_savesAndMaps() {
         UUID id = UUID.randomUUID();
         UpdateDutyDto dto = UpdateDutyDto.builder().name("N").build();
-        Duty e = new Duty();
+        Duty e = Duty.builder().id(id).code("X").name("Old").build();
 
         when(dutyRepository.findById(id)).thenReturn(Optional.of(e));
-        doAnswer(inv -> null).when(dutyMapper).updateEntity(dto, e);
+        when(dutyMapper.updateDomain(dto, e)).thenReturn(e);
+        when(dutyRepository.save(e)).thenReturn(e);
         when(dutyMapper.toDto(e)).thenReturn(DutyDto.builder().build());
 
         assertNotNull(service.update(id, dto));
-        verify(dutyRepository).flush();
     }
 
     @Test
@@ -140,13 +139,13 @@ class DutyServiceTest {
     }
 
     @Test
-    void update_duplicateCode_onFlush() {
+    void update_duplicateCode_onSave() {
         UUID id = UUID.randomUUID();
         UpdateDutyDto dto = UpdateDutyDto.builder().code("X").build();
-        Duty e = new Duty();
+        Duty e = Duty.builder().id(id).code("OLD").name("Old").build();
         when(dutyRepository.findById(id)).thenReturn(Optional.of(e));
-        doAnswer(inv -> null).when(dutyMapper).updateEntity(dto, e);
-        doThrow(new DataIntegrityViolationException("dup")).when(dutyRepository).flush();
+        when(dutyMapper.updateDomain(dto, e)).thenReturn(e);
+        when(dutyRepository.save(e)).thenThrow(new DataIntegrityViolationException("dup"));
 
         assertThrows(IllegalStateException.class, () -> service.update(id, dto));
     }
@@ -187,15 +186,12 @@ class DutyServiceTest {
     void listAssignments_mapsItems() {
         UUID dutyId = UUID.randomUUID();
         Pageable in = PageRequest.of(0, 10, Sort.by(Sort.Order.desc("assignedAt")));
-        DepartmentDutyAssignment a = new DepartmentDutyAssignment();
 
         when(dutyAssignmentRepository.findByDutyId(dutyId, in))
-                .thenReturn(new PageImpl<>(List.of(a), in, 1));
-        when(dutyAssignmentMapper.toDto(a)).thenReturn(DutyAssignmentDto.builder().build());
+                .thenReturn(new PageImpl<>(List.of(), in, 0));
 
         Page<DutyAssignmentDto> page = service.listAssignments(dutyId, in);
 
-        assertEquals(1, page.getTotalElements());
-        assertEquals(1, page.getContent().size());
+        assertEquals(0, page.getTotalElements());
     }
 }

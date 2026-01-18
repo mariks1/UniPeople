@@ -1,28 +1,30 @@
 package com.khasanshin.dutyservice;
 
+import com.khasanshin.dutyservice.application.DutyAssignmentApplicationService;
+import com.khasanshin.dutyservice.domain.model.DutyAssignment;
+import com.khasanshin.dutyservice.domain.port.DutyAssignmentRepositoryPort;
+import com.khasanshin.dutyservice.domain.port.DutyRepositoryPort;
+import com.khasanshin.dutyservice.domain.port.EmployeeVerifierPort;
+import com.khasanshin.dutyservice.domain.port.OrgVerifierPort;
 import com.khasanshin.dutyservice.dto.AssignDutyDto;
 import com.khasanshin.dutyservice.dto.DutyAssignmentDto;
-import com.khasanshin.dutyservice.entity.DepartmentDutyAssignment;
-import com.khasanshin.dutyservice.exception.RemoteServiceUnavailableException;
-import com.khasanshin.dutyservice.feign.EmployeeClient;
-import com.khasanshin.dutyservice.feign.EmployeeVerifier;
-import com.khasanshin.dutyservice.feign.OrgClient;
-import com.khasanshin.dutyservice.feign.OrgVerifier;
 import com.khasanshin.dutyservice.mapper.DutyAssignmentMapper;
-import com.khasanshin.dutyservice.repository.DutyAssignmentRepository;
-import com.khasanshin.dutyservice.repository.DutyRepository;
-import com.khasanshin.dutyservice.service.DutyAssignmentService;
-import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.*;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -31,20 +33,17 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DutyAssignmentServiceTest {
 
-    @Mock DutyAssignmentRepository assignmentRepo;
+    @Mock DutyAssignmentRepositoryPort assignmentRepo;
     @Mock DutyAssignmentMapper mapper;
-    @Mock DutyRepository dutyRepo;
-    @Mock
-    EmployeeVerifier employeeVerifier;
-    @Mock
-    OrgVerifier orgVerifier;
+    @Mock DutyRepositoryPort dutyRepo;
+    @Mock EmployeeVerifierPort employeeVerifier;
+    @Mock OrgVerifierPort orgVerifier;
 
-
-    DutyAssignmentService service;
+    DutyAssignmentApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new DutyAssignmentService(assignmentRepo, mapper, dutyRepo, employeeVerifier, orgVerifier);
+        service = new DutyAssignmentApplicationService(assignmentRepo, mapper, dutyRepo, employeeVerifier, orgVerifier);
     }
 
     @Test
@@ -65,10 +64,10 @@ class DutyAssignmentServiceTest {
         doNothing().when(employeeVerifier).ensureEmployeeExists(emp);
         when(dutyRepo.existsById(duty)).thenReturn(true);
 
-        DepartmentDutyAssignment saved = DepartmentDutyAssignment.builder()
+        DutyAssignment saved = DutyAssignment.builder()
                 .id(UUID.randomUUID()).departmentId(dept).employeeId(emp).dutyId(duty).build();
 
-        when(assignmentRepo.saveAndFlush(any(DepartmentDutyAssignment.class))).thenReturn(saved);
+        when(assignmentRepo.save(any(DutyAssignment.class))).thenReturn(saved);
         when(mapper.toDto(saved)).thenReturn(DutyAssignmentDto.builder().build());
 
         assertNotNull(service.assign(dept, req));
@@ -76,7 +75,7 @@ class DutyAssignmentServiceTest {
         verify(orgVerifier).ensureDepartmentExists(dept);
         verify(employeeVerifier).ensureEmployeeExists(emp);
         verify(dutyRepo).existsById(duty);
-        verify(assignmentRepo).saveAndFlush(any(DepartmentDutyAssignment.class));
+        verify(assignmentRepo).save(any(DutyAssignment.class));
     }
 
     @Test
@@ -126,7 +125,7 @@ class DutyAssignmentServiceTest {
         when(assignmentRepo.existsByDepartmentIdAndEmployeeIdAndDutyId(dept, emp, duty)).thenReturn(false);
         doNothing().when(orgVerifier).ensureDepartmentExists(dept);
         doThrow(new EntityNotFoundException("emp not found"))
-                     .when(employeeVerifier).ensureEmployeeExists(emp);
+                .when(employeeVerifier).ensureEmployeeExists(emp);
 
         assertThrows(EntityNotFoundException.class, () -> service.assign(dept, req));
         verify(dutyRepo, never()).existsById(any());
@@ -148,9 +147,9 @@ class DutyAssignmentServiceTest {
         doNothing().when(employeeVerifier).ensureEmployeeExists(by);
         when(dutyRepo.existsById(duty)).thenReturn(true);
 
-        DepartmentDutyAssignment saved = DepartmentDutyAssignment.builder()
+        DutyAssignment saved = DutyAssignment.builder()
                 .id(UUID.randomUUID()).departmentId(dept).employeeId(emp).dutyId(duty).assignedBy(by).build();
-        when(assignmentRepo.saveAndFlush(any(DepartmentDutyAssignment.class))).thenReturn(saved);
+        when(assignmentRepo.save(any(DutyAssignment.class))).thenReturn(saved);
         when(mapper.toDto(saved)).thenReturn(DutyAssignmentDto.builder().build());
 
         assertNotNull(service.assign(dept, req));
@@ -172,7 +171,7 @@ class DutyAssignmentServiceTest {
         when(dutyRepo.existsById(duty)).thenReturn(false);
 
         assertThrows(EntityNotFoundException.class, () -> service.assign(dept, req));
-        verify(assignmentRepo, never()).saveAndFlush(any());
+        verify(assignmentRepo, never()).save(any());
     }
 
     @Test
@@ -207,7 +206,7 @@ class DutyAssignmentServiceTest {
         UUID dept = UUID.randomUUID();
         UUID id = UUID.randomUUID();
 
-        DepartmentDutyAssignment a = DepartmentDutyAssignment.builder()
+        DutyAssignment a = DutyAssignment.builder()
                 .id(id).departmentId(dept).build();
 
         when(assignmentRepo.findById(id)).thenReturn(Optional.of(a));
@@ -228,7 +227,7 @@ class DutyAssignmentServiceTest {
         UUID dept = UUID.randomUUID();
         UUID id = UUID.randomUUID();
 
-        DepartmentDutyAssignment a = DepartmentDutyAssignment.builder()
+        DutyAssignment a = DutyAssignment.builder()
                 .id(id).departmentId(UUID.randomUUID()).build();
 
         when(assignmentRepo.findById(id)).thenReturn(Optional.of(a));
@@ -236,5 +235,4 @@ class DutyAssignmentServiceTest {
         assertThrows(EntityNotFoundException.class, () -> service.unassign(dept, id));
         verify(assignmentRepo, never()).delete(any());
     }
-
 }
