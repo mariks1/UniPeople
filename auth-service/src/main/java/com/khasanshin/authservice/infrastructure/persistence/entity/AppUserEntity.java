@@ -1,11 +1,10 @@
-package com.khasanshin.authservice.entity;
+package com.khasanshin.authservice.infrastructure.persistence.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.util.Set;
 import java.util.UUID;
+import lombok.*;
 
 @Entity
 @Getter
@@ -14,7 +13,7 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 @ToString(onlyExplicitlyIncluded = true)
 @Table(name = "app_user")
-public class AppUser {
+public class AppUserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -22,11 +21,11 @@ public class AppUser {
     @ToString.Include
     private UUID id;
 
-    @Column(unique=true, nullable=false)
+    @Column(unique = true, nullable = false)
     @ToString.Include
     private String username;
 
-    @Column(nullable=false)
+    @Column(nullable = false)
     @JsonIgnore
     @Setter(AccessLevel.PACKAGE)
     private String passwordHash;

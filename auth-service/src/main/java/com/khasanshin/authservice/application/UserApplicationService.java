@@ -1,39 +1,37 @@
-package com.khasanshin.authservice.service;
+package com.khasanshin.authservice.application;
 
-
+import com.khasanshin.authservice.domain.model.User;
+import com.khasanshin.authservice.domain.port.PasswordHasherPort;
+import com.khasanshin.authservice.domain.port.UserRepositoryPort;
 import com.khasanshin.authservice.dto.ChangePasswordRequestDto;
 import com.khasanshin.authservice.dto.CreateUserRequestDto;
 import com.khasanshin.authservice.dto.UpdateUserRolesRequestDto;
 import com.khasanshin.authservice.dto.UserDto;
-import com.khasanshin.authservice.entity.AppUser;
 import com.khasanshin.authservice.mapper.UserMapper;
-import com.khasanshin.authservice.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class UserService {
+public class UserApplicationService implements UserUseCase {
 
     private static final Set<String> ALLOWED_ROLES = Set.of(
             "SUPERVISOR", "ORG_ADMIN", "HR", "DEPT_HEAD", "EMPLOYEE", "SYSTEM"
     );
 
-    private final UserRepository repo;
+    private final UserRepositoryPort repo;
     private final UserMapper mapper;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHasherPort hasher;
 
     private String normalizeUsername(String raw) {
         return Objects.requireNonNull(raw, "username").trim().toLowerCase();
@@ -52,11 +50,12 @@ public class UserService {
         return norm;
     }
 
-    private AppUser getOrThrow(UUID id) {
+    private User getOrThrow(UUID id) {
         return repo.findById(id).orElseThrow(() ->
                 new EntityNotFoundException("User not found: " + id));
     }
 
+    @Override
     public UserDto create(CreateUserRequestDto dto) {
         String username = normalizeUsername(dto.getUsername());
         if (repo.existsByUsernameIgnoreCase(username)) {
@@ -64,35 +63,26 @@ public class UserService {
         }
 
         Set<String> roles = normalizeAndValidateRoles(dto.getRoles());
+        String hashed = hasher.hash(dto.getPassword());
 
-        AppUser entity = mapper.toEntity(dto);
-        entity = entity.toBuilder()
-                .username(username)
-                .roles(roles)
-                .build();
-
-        entity.changePasswordHash(passwordEncoder.encode(dto.getPassword()));
-
-        if (!entity.isEnabled() && Boolean.TRUE.equals(dto.getEnabled())) {
-            entity = entity.toBuilder().enabled(true).build();
-        } else if (dto.getEnabled() != null) {
-            entity = entity.toBuilder().enabled(dto.getEnabled()).build();
-        }
-
-        AppUser saved = repo.save(entity);
+        User toSave = mapper.toDomain(dto, username, roles, hashed);
+        User saved = repo.save(toSave);
         return mapper.toDto(saved);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public UserDto get(UUID id) {
         return mapper.toDto(getOrThrow(id));
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Page<UserDto> findAll(Pageable pageable) {
         return repo.findAll(pageable).map(mapper::toDto);
     }
 
+    @Override
     public void delete(UUID id) {
         if (!repo.existsById(id)) {
             throw new EntityNotFoundException("User not found: " + id);
@@ -100,34 +90,32 @@ public class UserService {
         repo.deleteById(id);
     }
 
+    @Override
     public UserDto setRoles(UUID id, UpdateUserRolesRequestDto dto) {
-        AppUser appUser = getOrThrow(id);
+        User user = getOrThrow(id);
         Set<String> roles = normalizeAndValidateRoles(dto.getRoles());
-        appUser.setRoles(roles);
-        return mapper.toDto(repo.save(appUser));
+        User updated = mapper.applyRoles(user, roles);
+        return mapper.toDto(repo.save(updated));
     }
 
+    @Override
     public UserDto setManagedDepartments(UUID id, Set<UUID> managedDeptIds) {
-        AppUser appUser = getOrThrow(id);
-        appUser.setManagedDeptIds(managedDeptIds == null ? Set.of() : managedDeptIds);
-        return mapper.toDto(repo.save(appUser));
+        User user = getOrThrow(id);
+        User updated = mapper.applyManagedDepartments(user, managedDeptIds);
+        return mapper.toDto(repo.save(updated));
     }
 
+    @Override
     public void changePassword(UUID id, ChangePasswordRequestDto dto) {
-        AppUser appUser = getOrThrow(id);
-        appUser.changePasswordHash(passwordEncoder.encode(dto.getNewPassword()));
-        repo.save(appUser);
+        User user = getOrThrow(id);
+        User updated = mapper.applyPasswordHash(user, hasher.hash(dto.getNewPassword()));
+        repo.save(updated);
     }
 
+    @Override
     public UserDto setEnabled(UUID id, boolean enabled) {
-        AppUser appUser = getOrThrow(id);
-        appUser.setEnabled(enabled);
-        return mapper.toDto(repo.save(appUser));
-    }
-
-    @Transactional(readOnly = true)
-    public AppUser findByUsername(String username) {
-        return repo.findByUsernameIgnoreCase(normalizeUsername(username))
-                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+        User user = getOrThrow(id);
+        User updated = mapper.applyEnabled(user, enabled);
+        return mapper.toDto(repo.save(updated));
     }
 }

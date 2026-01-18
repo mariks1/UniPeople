@@ -2,13 +2,11 @@ package com.khasanshin.authservice;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.khasanshin.authservice.application.AuthUseCase;
 import com.khasanshin.authservice.controller.AuthController;
 import com.khasanshin.authservice.dto.LoginRequestDto;
 import com.khasanshin.authservice.dto.TokenDto;
-import com.khasanshin.authservice.entity.AppUser;
-import com.khasanshin.authservice.service.TokenService;
-import com.khasanshin.authservice.service.UserService;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +17,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -29,11 +26,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Set;
-import java.util.UUID;
 
-
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -60,18 +56,11 @@ class AuthControllerTest {
         }
     }
 
-
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
 
-
     @MockitoBean
-    UserService userService;
-    @MockitoBean
-    TokenService tokenService;
-    @MockitoBean
-    PasswordEncoder passwordEncoder;
-
+    AuthUseCase authUseCase;
 
     @RestControllerAdvice
     static class BadCredAdvice {
@@ -81,26 +70,17 @@ class AuthControllerTest {
         }
     }
 
-
     @Test
     void login_success_returnsTokenAndExpiry() throws Exception {
         var username = "john";
         var password = "secret";
 
-
-        UUID uid = UUID.randomUUID();
-        AppUser user = AppUser.builder()
-                .id(uid)
-                .username(username)
-                .enabled(true)
-                .passwordHash("ENC")
-                .roles(Set.of("EMPLOYEE"))
+        TokenDto resp = TokenDto.builder()
+                .accessToken("jwt-token")
+                .expiresAt(Instant.now().plus(Duration.ofHours(1)))
                 .build();
 
-
-        given(userService.findByUsername(username)).willReturn(user);
-        given(passwordEncoder.matches(password, "ENC")).willReturn(true);
-        given(tokenService.issue(user)).willReturn("jwt-token");
+        given(authUseCase.login(any(LoginRequestDto.class))).willReturn(resp);
 
         LoginRequestDto req = LoginRequestDto.builder()
                 .username(username)
@@ -108,7 +88,6 @@ class AuthControllerTest {
                 .build();
 
         Instant before = Instant.now();
-
 
         mvc.perform(post("/api/v1/auth/login")
                         .with(csrf())
@@ -125,33 +104,13 @@ class AuthControllerTest {
                 });
     }
 
-
     @Test
-    void login_unknownUser_yields401() throws Exception {
-        given(userService.findByUsername("xxx")).willThrow(new EntityNotFoundException());
+    void login_badCredentials_yields401() throws Exception {
+        given(authUseCase.login(any(LoginRequestDto.class))).willThrow(new BadCredentialsException("Bad credentials"));
 
         LoginRequestDto req = LoginRequestDto.builder()
                 .username("xxx")
                 .password("yyyyyy")
-                .build();
-
-        mvc.perform(post("/api/v1/auth/login")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(req)))
-                .andExpect(status().isUnauthorized());
-    }
-
-
-    @Test
-    void login_disabledOrBadPassword_yields401() throws Exception {
-        AppUser user = AppUser.builder().id(UUID.randomUUID()).username("u").enabled(true).passwordHash("ENC").build();
-        given(userService.findByUsername("user")).willReturn(user);
-        given(passwordEncoder.matches("badbad", "ENC")).willReturn(false);
-
-        LoginRequestDto req = LoginRequestDto.builder()
-                .username("user")
-                .password("badbad")
                 .build();
 
         mvc.perform(post("/api/v1/auth/login")

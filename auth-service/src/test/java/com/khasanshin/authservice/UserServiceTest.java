@@ -1,27 +1,25 @@
 package com.khasanshin.authservice;
 
+import com.khasanshin.authservice.application.UserApplicationService;
+import com.khasanshin.authservice.domain.model.User;
+import com.khasanshin.authservice.domain.port.PasswordHasherPort;
+import com.khasanshin.authservice.domain.port.UserRepositoryPort;
 import com.khasanshin.authservice.dto.ChangePasswordRequestDto;
 import com.khasanshin.authservice.dto.CreateUserRequestDto;
 import com.khasanshin.authservice.dto.UpdateUserRolesRequestDto;
 import com.khasanshin.authservice.dto.UserDto;
-import com.khasanshin.authservice.entity.AppUser;
 import com.khasanshin.authservice.mapper.UserMapper;
-import com.khasanshin.authservice.repository.UserRepository;
-import com.khasanshin.authservice.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -30,19 +28,20 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    @Mock UserRepository repo;
-    @Mock UserMapper mapper;
-    @Mock PasswordEncoder passwordEncoder;
+    @Mock UserRepositoryPort repo;
+    @Mock PasswordHasherPort hasher;
 
-    UserService service;
+    UserMapper mapper;
+    UserApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new UserService(repo, mapper, passwordEncoder);
+        mapper = new UserMapper();
+        service = new UserApplicationService(repo, mapper, hasher);
     }
 
-    private AppUser baseUser(UUID id) {
-        return AppUser.builder()
+    private User baseUser(UUID id) {
+        return User.builder()
                 .id(id)
                 .username("john")
                 .roles(Set.of("EMPLOYEE"))
@@ -60,30 +59,26 @@ class UserServiceTest {
         when(dto.getEnabled()).thenReturn(Boolean.TRUE);
 
         when(repo.existsByUsernameIgnoreCase("alice")).thenReturn(false);
+        when(hasher.hash("plain")).thenReturn("ENCODED");
 
-        AppUser draft = AppUser.builder().username("whatever").enabled(false).roles(Set.of()).build();
-        when(mapper.toEntity(dto)).thenReturn(draft);
-        when(passwordEncoder.encode("plain")).thenReturn("ENCODED");
-
-        AppUser saved = baseUser(UUID.randomUUID()).toBuilder()
+        User saved = User.builder()
                 .username("alice")
+                .passwordHash("ENCODED")
+                .id(UUID.randomUUID())
                 .roles(Set.of("EMPLOYEE", "HR"))
+                .enabled(true)
                 .build();
-        when(repo.save(any(AppUser.class))).thenReturn(saved);
-
-        UserDto expectedDto = mock(UserDto.class);
-        when(mapper.toDto(saved)).thenReturn(expectedDto);
+        ArgumentCaptor<User> toSaveCaptor = ArgumentCaptor.forClass(User.class);
+        when(repo.save(any(User.class))).thenReturn(saved);
 
         UserDto result = service.create(dto);
 
-        assertThat(result).isSameAs(expectedDto);
-
-        ArgumentCaptor<AppUser> entityCaptor = ArgumentCaptor.forClass(AppUser.class);
-        verify(repo).save(entityCaptor.capture());
-        AppUser toSave = entityCaptor.getValue();
-        assertThat(toSave.getUsername()).isEqualTo("alice");
-        assertThat(toSave.getRoles()).containsExactlyInAnyOrder("EMPLOYEE", "HR");
-        verify(passwordEncoder).encode("plain");
+        assertThat(result.getId()).isEqualTo(saved.getId());
+        assertThat(result.getUsername()).isEqualTo("alice");
+        assertThat(result.getRoles()).containsExactlyInAnyOrder("EMPLOYEE", "HR");
+        verify(hasher).hash("plain");
+        verify(repo).save(toSaveCaptor.capture());
+        assertThat(toSaveCaptor.getValue().getUsername()).isEqualTo("alice");
     }
 
     @Test
@@ -113,13 +108,11 @@ class UserServiceTest {
     @Test
     void get_returnsDto_orThrows() {
         UUID id = UUID.randomUUID();
-        AppUser entity = baseUser(id);
-        UserDto dto = mock(UserDto.class);
+        User entity = baseUser(id);
 
         when(repo.findById(id)).thenReturn(Optional.of(entity));
-        when(mapper.toDto(entity)).thenReturn(dto);
 
-        assertThat(service.get(id)).isSameAs(dto);
+        assertThat(service.get(id).getId()).isEqualTo(id);
 
         when(repo.findById(id)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.get(id)).isInstanceOf(EntityNotFoundException.class);
@@ -127,17 +120,15 @@ class UserServiceTest {
 
     @Test
     void findAll_mapsEntitiesToDtos() {
-        AppUser u1 = baseUser(UUID.randomUUID());
-        AppUser u2 = baseUser(UUID.randomUUID());
-        UserDto d1 = mock(UserDto.class);
-        UserDto d2 = mock(UserDto.class);
+        User u1 = baseUser(UUID.randomUUID());
+        User u2 = baseUser(UUID.randomUUID());
         when(repo.findAll(PageRequest.of(0, 2)))
                 .thenReturn(new PageImpl<>(List.of(u1, u2)));
-        when(mapper.toDto(u1)).thenReturn(d1);
-        when(mapper.toDto(u2)).thenReturn(d2);
 
         Page<UserDto> page = service.findAll(PageRequest.of(0, 2));
-        assertThat(page.getContent()).containsExactly(d1, d2);
+        assertThat(page.getContent())
+                .extracting(UserDto::getId)
+                .containsExactly(u1.getId(), u2.getId());
     }
 
     @Test
@@ -154,18 +145,17 @@ class UserServiceTest {
     @Test
     void setRoles_validatesAndSaves() {
         UUID id = UUID.randomUUID();
-        AppUser entity = baseUser(id);
+        User entity = baseUser(id);
         when(repo.findById(id)).thenReturn(Optional.of(entity));
 
         UpdateUserRolesRequestDto dto = mock(UpdateUserRolesRequestDto.class);
         when(dto.getRoles()).thenReturn(Set.of("hr", " employee "));
 
-        AppUser saved = entity.toBuilder().roles(Set.of("HR", "EMPLOYEE")).build();
-        when(repo.save(any(AppUser.class))).thenReturn(saved);
-        UserDto out = mock(UserDto.class);
-        when(mapper.toDto(saved)).thenReturn(out);
+        User saved = entity.toBuilder().roles(Set.of("HR", "EMPLOYEE")).build();
+        when(repo.save(any(User.class))).thenReturn(saved);
 
-        assertThat(service.setRoles(id, dto)).isSameAs(out);
+        UserDto out = service.setRoles(id, dto);
+        assertThat(out.getRoles()).containsExactlyInAnyOrder("HR", "EMPLOYEE");
 
         when(dto.getRoles()).thenReturn(Set.of("GODMODE"));
         assertThatThrownBy(() -> service.setRoles(id, dto))
@@ -175,55 +165,43 @@ class UserServiceTest {
     @Test
     void setManagedDepartments_nullMeansEmpty() {
         UUID id = UUID.randomUUID();
-        AppUser entity = baseUser(id);
+        User entity = baseUser(id);
         when(repo.findById(id)).thenReturn(Optional.of(entity));
 
-        AppUser saved = entity.toBuilder().managedDeptIds(Set.of()).build();
-        when(repo.save(any(AppUser.class))).thenReturn(saved);
-        UserDto dto = mock(UserDto.class);
-        when(mapper.toDto(saved)).thenReturn(dto);
+        User saved = entity.toBuilder().managedDeptIds(Set.of()).build();
+        when(repo.save(any(User.class))).thenReturn(saved);
 
-        assertThat(service.setManagedDepartments(id, null)).isSameAs(dto);
+        assertThat(service.setManagedDepartments(id, null).getManagedDeptIds()).isEmpty();
         verify(repo).save(argThat(u -> u.getManagedDeptIds().isEmpty()));
     }
 
     @Test
     void changePassword_encodesAndSaves() {
         UUID id = UUID.randomUUID();
-        AppUser entity = baseUser(id);
+        User entity = baseUser(id);
         when(repo.findById(id)).thenReturn(Optional.of(entity));
         ChangePasswordRequestDto dto = mock(ChangePasswordRequestDto.class);
         when(dto.getNewPassword()).thenReturn("new");
-        when(passwordEncoder.encode("new")).thenReturn("ENC");
+        when(hasher.hash("new")).thenReturn("ENC");
+
+        when(repo.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.changePassword(id, dto);
-        verify(passwordEncoder).encode("new");
-        verify(repo).save(entity);
+        verify(hasher).hash("new");
+        verify(repo).save(argThat(u -> "ENC".equals(u.getPasswordHash())));
     }
 
     @Test
     void setEnabled_updatesFlag() {
         UUID id = UUID.randomUUID();
-        AppUser entity = baseUser(id);
+        User entity = baseUser(id);
         when(repo.findById(id)).thenReturn(Optional.of(entity));
 
-        AppUser saved = entity.toBuilder().enabled(false).build();
-        when(repo.save(any(AppUser.class))).thenReturn(saved);
-        UserDto dto = mock(UserDto.class);
-        when(mapper.toDto(saved)).thenReturn(dto);
+        User saved = entity.toBuilder().enabled(false).build();
+        when(repo.save(any(User.class))).thenReturn(saved);
 
-        assertThat(service.setEnabled(id, false)).isSameAs(dto);
+        UserDto dto = service.setEnabled(id, false);
+        assertThat(dto.isEnabled()).isFalse();
         verify(repo).save(argThat(u -> !u.isEnabled()));
-    }
-
-    @Test
-    void findByUsername_normalizesAndThrowsWhenMissing() {
-        AppUser entity = baseUser(UUID.randomUUID());
-        when(repo.findByUsernameIgnoreCase("john.doe")).thenReturn(Optional.of(entity));
-        assertThat(service.findByUsername("  John.Doe  ")).isSameAs(entity);
-
-        when(repo.findByUsernameIgnoreCase("missing")).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.findByUsername("missing"))
-                .isInstanceOf(EntityNotFoundException.class);
     }
 }
