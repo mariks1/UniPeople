@@ -1,10 +1,10 @@
 package com.khasanshin.employeeservice.controller;
 
+import com.khasanshin.employeeservice.application.EmployeeUseCase;
 import com.khasanshin.employeeservice.dto.CreateEmployeeDto;
 import com.khasanshin.employeeservice.dto.EmployeeDto;
 import com.khasanshin.employeeservice.dto.UpdateEmployeeDto;
 import com.khasanshin.employeeservice.event.EmployeeEventPublisher;
-import com.khasanshin.employeeservice.service.EmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class EmployeeController {
 
-  private final EmployeeService employeeService;
+  private final EmployeeUseCase employeeService;
   private final EmployeeEventPublisher publisher;
 
   @Operation(

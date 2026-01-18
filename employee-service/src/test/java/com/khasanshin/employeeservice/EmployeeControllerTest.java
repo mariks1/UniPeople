@@ -3,8 +3,10 @@ package com.khasanshin.employeeservice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.khasanshin.employeeservice.controller.EmployeeController;
 import com.khasanshin.employeeservice.dto.EmployeeDto;
+import com.khasanshin.employeeservice.event.EmployeeEventPublisher;
 import com.khasanshin.employeeservice.exception.GlobalExceptionHandler;
-import com.khasanshin.employeeservice.service.EmployeeService;
+import com.khasanshin.employeeservice.application.EmployeeUseCase;
+import com.khasanshin.employeeservice.repository.EmployeeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +40,9 @@ class EmployeeControllerTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
-    @MockitoBean EmployeeService service;
+    @MockitoBean EmployeeUseCase service;
+    @MockitoBean
+    EmployeeEventPublisher employeeEventPublisher;
 
     @MockitoBean
     JwtDecoder jwtDecoder;

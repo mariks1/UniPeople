@@ -1,9 +1,10 @@
 package com.khasanshin.employeeservice.mapper;
 
+import com.khasanshin.employeeservice.domain.model.Employee;
 import com.khasanshin.employeeservice.dto.CreateEmployeeDto;
 import com.khasanshin.employeeservice.dto.EmployeeDto;
-import com.khasanshin.employeeservice.entity.Employee;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface EmployeeMapper {
@@ -13,10 +14,10 @@ public interface EmployeeMapper {
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "version", ignore = true)
-  @Mapping(target = "department", ignore = true)
+  @Mapping(target = "department", source = "departmentId")
   @Mapping(target = "status", constant = "ACTIVE")
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
-  Employee toEntity(CreateEmployeeDto dto);
+  Employee toDomain(CreateEmployeeDto dto);
 
 }
