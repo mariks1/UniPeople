@@ -1,12 +1,14 @@
-package com.khasanshin.leaveservice.service;
+package com.khasanshin.leaveservice.application;
 
-import com.khasanshin.leaveservice.dto.*;
-import com.khasanshin.leaveservice.entity.LeaveRequest;
-import com.khasanshin.leaveservice.entity.LeaveType;
+import com.khasanshin.leaveservice.domain.model.LeaveRequest;
+import com.khasanshin.leaveservice.domain.model.LeaveType;
+import com.khasanshin.leaveservice.domain.port.LeaveRequestRepositoryPort;
+import com.khasanshin.leaveservice.domain.port.LeaveTypeRepositoryPort;
+import com.khasanshin.leaveservice.dto.CreateLeaveRequestDto;
+import com.khasanshin.leaveservice.dto.DecisionDto;
+import com.khasanshin.leaveservice.dto.LeaveRequestDto;
+import com.khasanshin.leaveservice.dto.UpdateLeaveRequestDto;
 import com.khasanshin.leaveservice.mapper.LeaveMapper;
-import com.khasanshin.leaveservice.repository.LeaveRequestRepository;
-import com.khasanshin.leaveservice.repository.LeaveTypeRepository;
-
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -25,55 +27,20 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
-public class LeaveService {
+public class LeaveRequestApplicationService implements LeaveRequestUseCase {
 
-  private final LeaveTypeRepository leaveTypeRepository;
-  private final LeaveRequestRepository leaveRequestRepository;
+  private final LeaveTypeRepositoryPort leaveTypeRepository;
+  private final LeaveRequestRepositoryPort leaveRequestRepository;
   private final LeaveMapper leaveMapper;
 
-  public Mono<Long> countTypes() {
-      return leaveTypeRepository.count();
-  }
-
-    public Flux<LeaveTypeDto> listTypes(Pageable p) {
-        Pageable capped = PageRequest.of(
-                Math.max(0, p.getPageNumber()),
-                Math.min(p.getPageSize(), 50),
-                p.getSort()
-        );
-        return leaveTypeRepository.findAllBy(capped).map(leaveMapper::toDto);
-    }
-  @Transactional
-  public Mono<LeaveTypeDto> createType(CreateLeaveTypeDto dto) {
-    return leaveTypeRepository.existsByCodeIgnoreCase(dto.getCode())
-            .flatMap(exists -> exists
-                    ? Mono.error(new IllegalStateException("type code exists"))
-                    : leaveTypeRepository.save(leaveMapper.toEntity(dto)).map(leaveMapper::toDto));
-  }
-
-  @Transactional
-  public Mono<LeaveTypeDto> updateType(UUID id, UpdateLeaveTypeDto dto) {
-    return leaveTypeRepository.findById(id)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "type not found")))
-            .map(e -> { leaveMapper.updateEntity(dto, e); return e; })
-            .flatMap(leaveTypeRepository::save)
-            .map(leaveMapper::toDto);
-  }
-
-  @Transactional
-  public Mono<Void> deleteType(UUID id) {
-    return leaveTypeRepository.existsById(id)
-            .flatMap(exists -> exists
-                    ? leaveTypeRepository.deleteById(id)
-                    : Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "type not found")));
-  }
-
+  @Override
   public Mono<LeaveRequestDto> get(UUID id) {
       return getLeaveOr404(id).map(leaveMapper::toDto);
   }
 
+  @Override
   @Transactional
-  public Mono<LeaveRequestDto> create(CreateLeaveRequestDto dto) { // TODO облегчить
+  public Mono<LeaveRequestDto> create(CreateLeaveRequestDto dto) {
       validateDateOrder(dto.getDateFrom(), dto.getDateTo());
 
       Mono<LeaveType> typeMono = getTypeOr404(dto.getTypeId()).cache();
@@ -86,25 +53,27 @@ public class LeaveService {
               : Mono.empty();
 
       return Mono.when(typeMono.then(), overlaps, limitCheck)
-              .then(Mono.fromSupplier(() -> leaveMapper.toEntity(dto)))
+              .then(Mono.fromSupplier(() -> leaveMapper.toDomain(dto)))
               .flatMap(leaveRequestRepository::save)
               .map(leaveMapper::toDto);
   }
 
+  @Override
   @Transactional
   public Mono<LeaveRequestDto> update(UUID id, UpdateLeaveRequestDto dto) {
       return getLeaveOr404(id)
               .flatMap(e -> requireStatus(e, "only DRAFT/PENDING can be updated",
                       LeaveRequest.Status.DRAFT, LeaveRequest.Status.PENDING))
               .flatMap(e -> {
-                  leaveMapper.updateEntity(dto, e);
-                  validateDateOrder(e.getDateFrom(), e.getDateTo());
-                  return requireNoOverlapsExcluding(e.getId(), e.getEmployeeId(), e.getDateFrom(), e.getDateTo())
-                          .then(leaveRequestRepository.save(e));
+                  LeaveRequest updated = leaveMapper.updateLeave(dto, e);
+                  validateDateOrder(updated.getDateFrom(), updated.getDateTo());
+                  return requireNoOverlapsExcluding(updated.getId(), updated.getEmployeeId(), updated.getDateFrom(), updated.getDateTo())
+                          .then(Mono.defer(() -> leaveRequestRepository.save(updated)));
               })
               .map(leaveMapper::toDto);
   }
 
+  @Override
   @Transactional
   public Mono<LeaveRequestDto> approve(UUID id, DecisionDto d) {
       return getLeaveOr404(id)
@@ -117,56 +86,67 @@ public class LeaveService {
                           .flatMap(type -> ensureWithinYearLimit(e.getEmployeeId(), type, year, requested));
 
                   return limitCheck.then(Mono.defer(() -> {
-                      e.setApproverId(d.getApproverId());
-                      if (Objects.nonNull(d.getComment())) e.setComment(d.getComment());
-                      e.setStatus(LeaveRequest.Status.APPROVED);
-                      return leaveRequestRepository.save(e);
+                      LeaveRequest updated = e.toBuilder()
+                              .approverId(d.getApproverId())
+                              .comment(Objects.requireNonNullElse(d.getComment(), e.getComment()))
+                              .status(LeaveRequest.Status.APPROVED)
+                              .build();
+                      return leaveRequestRepository.save(updated);
                   }));
               })
               .map(leaveMapper::toDto);
   }
 
+  @Override
   @Transactional
   public Mono<LeaveRequestDto> reject(UUID id, DecisionDto d) {
       return getLeaveOr404(id)
               .flatMap(e -> requireStatus(e, "not PENDING", LeaveRequest.Status.PENDING))
               .flatMap(e -> {
-                  e.setApproverId(d.getApproverId());
-                  if (Objects.nonNull(d.getComment())) e.setComment(d.getComment());
-                  e.setStatus(LeaveRequest.Status.REJECTED);
-                  return leaveRequestRepository.save(e);
+                  LeaveRequest updated = e.toBuilder()
+                          .approverId(d.getApproverId())
+                          .comment(Objects.requireNonNullElse(d.getComment(), e.getComment()))
+                          .status(LeaveRequest.Status.REJECTED)
+                          .build();
+                  return leaveRequestRepository.save(updated);
               })
               .map(leaveMapper::toDto);
   }
 
+  @Override
   @Transactional
   public Mono<LeaveRequestDto> cancel(UUID id) {
       return getLeaveOr404(id)
               .flatMap(e -> requireStatus(e, "only PENDING/APPROVED can be canceled",
                       LeaveRequest.Status.PENDING, LeaveRequest.Status.APPROVED))
-              .flatMap(e -> {
-                  e.setStatus(LeaveRequest.Status.CANCELED);
-                  return leaveRequestRepository.save(e);
-              })
+              .flatMap(e -> leaveRequestRepository.save(e.toBuilder().status(LeaveRequest.Status.CANCELED).build()))
               .map(leaveMapper::toDto);
   }
 
+  @Override
   public Mono<Long> countLeaveByEmployee(UUID empId) {
       return leaveRequestRepository.countByEmployeeId(empId);
   }
 
+  @Override
   public Flux<LeaveRequestDto> listByEmployee(UUID empId, Pageable p) {
       return leaveRequestRepository
               .findByEmployeeIdOrderByDateFromDesc(empId, p)
               .map(leaveMapper::toDto);
   }
 
+  @Override
   public Mono<Long> countLeaveByStatus(LeaveRequest.Status status) {
       return leaveRequestRepository.countByStatus(status);
   }
 
+  @Override
   public Flux<LeaveRequestDto> listByStatus(LeaveRequest.Status status, Pageable p) {
-      return leaveRequestRepository.findByStatus(status, p).map(leaveMapper::toDto);
+      Pageable capped = PageRequest.of(
+              Math.max(0, p.getPageNumber()),
+              Math.min(p.getPageSize(), 50),
+              p.getSort());
+      return leaveRequestRepository.findByStatus(status, capped).map(leaveMapper::toDto);
   }
 
     private Mono<LeaveType> getTypeOr404(UUID typeId) {

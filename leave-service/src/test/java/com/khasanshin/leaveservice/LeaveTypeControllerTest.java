@@ -1,11 +1,11 @@
 package com.khasanshin.leaveservice;
 
+import com.khasanshin.leaveservice.application.LeaveTypeUseCase;
 import com.khasanshin.leaveservice.controller.LeaveTypeController;
 import com.khasanshin.leaveservice.dto.CreateLeaveTypeDto;
 import com.khasanshin.leaveservice.dto.LeaveTypeDto;
 import com.khasanshin.leaveservice.dto.UpdateLeaveTypeDto;
 import com.khasanshin.leaveservice.exception.GlobalExceptionHandler;
-import com.khasanshin.leaveservice.service.LeaveService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@ class LeaveTypeControllerTest {
     WebTestClient web;
 
     @MockitoBean
-    LeaveService service;
+    LeaveTypeUseCase service;
 
     @BeforeEach
     void mockJwtDefault() {
