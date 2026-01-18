@@ -2,12 +2,11 @@ package com.khasanshin.employmentservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.khasanshin.employmentservice.domain.model.Employment;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-
-import com.khasanshin.employmentservice.entity.Employment;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;

@@ -1,10 +1,11 @@
 package com.khasanshin.employmentservice.mapper;
 
+import com.khasanshin.employmentservice.domain.model.Employment;
 import com.khasanshin.employmentservice.dto.CreateEmploymentDto;
 import com.khasanshin.employmentservice.dto.EmploymentDto;
 import com.khasanshin.employmentservice.dto.UpdateEmploymentDto;
-import com.khasanshin.employmentservice.entity.Employment;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface EmploymentMapper {
@@ -16,16 +17,13 @@ public interface EmploymentMapper {
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "updatedAt", ignore = true)
   @Mapping(target = "endDate", ignore = true)
-  Employment toEntity(CreateEmploymentDto dto);
+  Employment toDomain(CreateEmploymentDto dto);
 
-  @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-  @Mapping(target = "id", ignore = true)
-  @Mapping(target = "employeeId", ignore = true)
-  @Mapping(target = "departmentId", ignore = true)
-  @Mapping(target = "positionId", ignore = true)
-  @Mapping(target = "status", ignore = true)
-  @Mapping(target = "createdAt", ignore = true)
-  @Mapping(target = "updatedAt", ignore = true)
-  @Mapping(target = "startDate", ignore = true)
-  void updateEntity(UpdateEmploymentDto dto, @MappingTarget Employment e);
+  default Employment applyUpdates(Employment current, UpdateEmploymentDto dto) {
+      Employment.EmploymentBuilder builder = current.toBuilder();
+      if (dto.getSalary() != null) builder.salary(dto.getSalary());
+      if (dto.getRate() != null) builder.rate(dto.getRate());
+      if (dto.getEndDate() != null) builder.endDate(dto.getEndDate());
+      return builder.build();
+  }
 }

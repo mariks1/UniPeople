@@ -1,10 +1,10 @@
 package com.khasanshin.employmentservice.controller;
 
+import com.khasanshin.employmentservice.application.EmploymentUseCase;
 import com.khasanshin.employmentservice.dto.CloseEmploymentDto;
 import com.khasanshin.employmentservice.dto.CreateEmploymentDto;
 import com.khasanshin.employmentservice.dto.EmploymentDto;
 import com.khasanshin.employmentservice.dto.UpdateEmploymentDto;
-import com.khasanshin.employmentservice.service.EmploymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -33,7 +33,7 @@ import reactor.core.publisher.Mono;
     description = "Штатные назначения: создание, обновление, закрытие, выборки")
 public class EmploymentController {
 
-  private final EmploymentService employmentService;
+  private final EmploymentUseCase employmentService;
 
   @Operation(summary = "Получить назначение по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
