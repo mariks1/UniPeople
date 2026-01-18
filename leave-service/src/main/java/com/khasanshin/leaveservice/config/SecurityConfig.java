@@ -17,13 +17,16 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/actuator/health","/v3/api-docs/**",
+                        .pathMatchers(
+                                "/actuator/health",
+                                "/v3/api-docs/**",
                                 "/swagger-ui.html",
-                                "/swagger-ui/**").permitAll()
+                                "/swagger-ui/**"
+                        ).permitAll()
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> {})
+                        .jwt() // БЕЗ своих decoder'ов и converter'ов
                 )
                 .build();
     }

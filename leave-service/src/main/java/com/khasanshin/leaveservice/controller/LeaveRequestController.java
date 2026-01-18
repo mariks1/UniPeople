@@ -5,6 +5,7 @@ import com.khasanshin.leaveservice.dto.DecisionDto;
 import com.khasanshin.leaveservice.dto.LeaveRequestDto;
 import com.khasanshin.leaveservice.dto.UpdateLeaveRequestDto;
 import com.khasanshin.leaveservice.entity.LeaveRequest;
+import com.khasanshin.leaveservice.event.LeaveEventPublisher;
 import com.khasanshin.leaveservice.service.LeaveService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -33,6 +34,7 @@ import reactor.core.publisher.Mono;
 public class LeaveRequestController {
 
   private final LeaveService service;
+  private final LeaveEventPublisher publisher;
 
   @Operation(summary = "Получить заявку на отпуск по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
@@ -50,7 +52,8 @@ public class LeaveRequestController {
   @PostMapping
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication, #body.employeeId)")
   public Mono<LeaveRequestDto> create(@P("body") @Valid @RequestBody CreateLeaveRequestDto body) {
-      return service.create(body);
+      return service.create(body)
+              .doOnSuccess(saved -> publisher.leaveCreated(saved.getId(), saved));
     }
 
   @Operation(summary = "Обновить заявку (DRAFT/PENDING)")
@@ -76,7 +79,8 @@ public class LeaveRequestController {
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR','DEPT_HEAD')")
   public Mono<LeaveRequestDto> approve(
       @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
-    return service.approve(id, body);
+    return service.approve(id, body)
+            .doOnSuccess(saved -> publisher.leaveApproved(saved.getId(), saved));
   }
 
   @Operation(summary = "Отклонить заявку")
@@ -89,7 +93,8 @@ public class LeaveRequestController {
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR','DEPT_HEAD')")
   public Mono<LeaveRequestDto> reject(
       @PathVariable("id") UUID id, @Valid @RequestBody DecisionDto body) {
-    return service.reject(id, body);
+    return service.reject(id, body)
+            .doOnSuccess(saved -> publisher.leaveRejected(saved.getId(), saved));
   }
 
   @Operation(summary = "Отменить заявку (PENDING/APPROVED)")
@@ -101,7 +106,8 @@ public class LeaveRequestController {
   @PostMapping("/{id}/cancel")
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication, T(java.util.UUID).fromString(#id.toString()))")
   public Mono<LeaveRequestDto> cancel(@PathVariable("id") UUID id) {
-    return service.cancel(id);
+    return service.cancel(id)
+            .doOnSuccess(saved -> publisher.leaveCanceled(saved.getId(), saved));
   }
 
   @Operation(summary = "Заявки сотрудника (пагинация)")

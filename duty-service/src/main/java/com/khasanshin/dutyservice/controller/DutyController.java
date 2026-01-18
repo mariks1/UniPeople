@@ -1,6 +1,7 @@
 package com.khasanshin.dutyservice.controller;
 
 import com.khasanshin.dutyservice.dto.*;
+import com.khasanshin.dutyservice.event.DutyEventPublisher;
 import com.khasanshin.dutyservice.service.DutyAssignmentService;
 import com.khasanshin.dutyservice.service.DutyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +28,7 @@ public class DutyController {
 
   private final DutyService service;
   private final DutyAssignmentService assignmentService;
+  private final DutyEventPublisher publisher;
 
   @Operation(
       summary = "Список обязанностей (пагинация)",
@@ -67,6 +69,7 @@ public class DutyController {
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<DutyDto> create(@Valid @RequestBody CreateDutyDto dto) {
     DutyDto created = service.create(dto);
+    publisher.dutyCreated(created);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
@@ -80,7 +83,9 @@ public class DutyController {
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<DutyDto> update(
       @PathVariable("id") UUID id, @Valid @RequestBody UpdateDutyDto dto) {
-    return ResponseEntity.ok(service.update(id, dto));
+    DutyDto updated = service.update(id, dto);
+    publisher.dutyUpdated(updated);
+    return ResponseEntity.ok(updated);
   }
 
   @Operation(summary = "Удалить обязанность")
@@ -93,6 +98,7 @@ public class DutyController {
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")
   public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
     service.delete(id);
+    publisher.dutyDeleted(id);
     return ResponseEntity.noContent().build();
   }
 
@@ -152,6 +158,7 @@ public class DutyController {
           @PathVariable("departmentId") @P("departmentId") UUID departmentId, @Valid @RequestBody AssignDutyDto req) {
 
     DutyAssignmentDto created = assignmentService.assign(departmentId, req);
+    publisher.dutyAssigned(created);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
@@ -168,7 +175,15 @@ public class DutyController {
       @PathVariable("departmentId") UUID departmentId,
       @PathVariable("assignmentId") UUID assignmentId) {
 
-    assignmentService.unassign(departmentId, assignmentId);
+    DutyAssignmentDto removed = assignmentService.unassignAndReturn(departmentId, assignmentId);
+
+    publisher.dutyUnassigned(
+            assignmentId,
+            removed.getEmployeeId(),
+            removed.getDepartmentId(),
+            removed.getDutyId()
+    );
+
     return ResponseEntity.noContent().build();
   }
 
