@@ -1,9 +1,9 @@
 package com.khasanshin.organizationservice.controller;
 
+import com.khasanshin.organizationservice.application.PositionUseCase;
 import com.khasanshin.organizationservice.dto.CreatePositionDto;
 import com.khasanshin.organizationservice.dto.PositionDto;
 import com.khasanshin.organizationservice.dto.UpdatePositionDto;
-import com.khasanshin.organizationservice.service.PositionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Position", description = "Справочник должностей")
 public class PositionController {
 
-  private final PositionService positionService;
+  private final PositionUseCase positionService;
 
   @Operation(
       summary = "Список должностей (пагинация)",

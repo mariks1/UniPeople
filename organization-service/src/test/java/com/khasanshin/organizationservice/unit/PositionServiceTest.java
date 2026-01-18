@@ -1,10 +1,10 @@
 package com.khasanshin.organizationservice.unit;
 
+import com.khasanshin.organizationservice.application.PositionApplicationService;
+import com.khasanshin.organizationservice.domain.model.Position;
+import com.khasanshin.organizationservice.domain.port.PositionRepositoryPort;
 import com.khasanshin.organizationservice.dto.*;
-import com.khasanshin.organizationservice.entity.Position;
 import com.khasanshin.organizationservice.mapper.PositionMapper;
-import com.khasanshin.organizationservice.repository.PositionRepository;
-import com.khasanshin.organizationservice.service.PositionService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,21 +28,21 @@ import static org.mockito.Mockito.*;
 public class PositionServiceTest {
 
     @Mock
-    PositionRepository positionRepository;
+    PositionRepositoryPort positionRepository;
     @Mock
     PositionMapper mapper;
 
-    PositionService service;
+    PositionApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new PositionService(positionRepository, mapper);
+        service = new PositionApplicationService(positionRepository, mapper);
     }
 
     @Test
     void get_ok() {
         UUID id = UUID.randomUUID();
-        Position p = new Position();
+        Position p = Position.builder().id(id).name("X").build();
         when(positionRepository.findById(id)).thenReturn(Optional.of(p));
         when(mapper.toDto(p)).thenReturn(PositionDto.builder().build());
 
@@ -61,15 +61,15 @@ public class PositionServiceTest {
                 .name("Pos")
                 .build();
 
-        Position entity = new Position();
-        Position saved = new Position();
-        when(mapper.toEntity(dto)).thenReturn(entity);
-        when(positionRepository.saveAndFlush(entity)).thenReturn(saved);
+        Position entity = Position.builder().name("Pos").build();
+        Position saved = entity.toBuilder().id(UUID.randomUUID()).build();
+        when(mapper.toDomain(dto)).thenReturn(entity);
+        when(positionRepository.save(entity)).thenReturn(saved);
         when(mapper.toDto(saved)).thenReturn(PositionDto.builder().build());
 
         assertNotNull(service.create(dto));
 
-        verify(positionRepository).saveAndFlush(entity);
+        verify(positionRepository).save(entity);
     }
 
     @Test
@@ -79,13 +79,16 @@ public class PositionServiceTest {
                 .name("NewName")
                 .build();
 
-        Position e = new Position();
+        Position e = Position.builder().id(id).name("Old").build();
+        Position updated = Position.builder().id(id).name("NewName").build();
         when(positionRepository.findById(id)).thenReturn(Optional.of(e));
-        when(mapper.toDto(e)).thenReturn(PositionDto.builder().build());
+        when(mapper.updateDomain(dto, e)).thenReturn(updated);
+        when(positionRepository.save(updated)).thenReturn(updated);
+        when(mapper.toDto(updated)).thenReturn(PositionDto.builder().build());
 
         assertNotNull(service.update(id, dto));
 
-        verify(mapper, times(1)).updateEntity(dto, e);
+        verify(mapper, times(1)).updateDomain(dto, e);
     }
 
     @Test

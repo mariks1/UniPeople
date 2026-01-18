@@ -1,11 +1,11 @@
-package com.khasanshin.organizationservice.service;
+package com.khasanshin.organizationservice.application;
 
+import com.khasanshin.organizationservice.domain.model.Faculty;
+import com.khasanshin.organizationservice.domain.port.FacultyRepositoryPort;
 import com.khasanshin.organizationservice.dto.CreateFacultyDto;
 import com.khasanshin.organizationservice.dto.FacultyDto;
 import com.khasanshin.organizationservice.dto.UpdateFacultyDto;
-import com.khasanshin.organizationservice.entity.Faculty;
 import com.khasanshin.organizationservice.mapper.FacultyMapper;
-import com.khasanshin.organizationservice.repository.FacultyRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class FacultyService {
+public class FacultyApplicationService implements FacultyUseCase {
 
-  private final FacultyRepository repo;
+  private final FacultyRepositoryPort repo;
   private final FacultyMapper mapper;
 
+  @Override
   public Page<FacultyDto> page(Pageable pageable) {
     Pageable sorted =
         pageable.getSort().isSorted()
@@ -31,6 +32,7 @@ public class FacultyService {
     return repo.findAll(sorted).map(mapper::toDto);
   }
 
+  @Override
   public FacultyDto get(UUID id) {
     Faculty d =
         repo.findById(id)
@@ -38,31 +40,30 @@ public class FacultyService {
     return mapper.toDto(d);
   }
 
+  @Override
   @Transactional
   public FacultyDto create(CreateFacultyDto dto) {
-    Faculty faculty = mapper.toEntity(dto);
+    Faculty faculty = mapper.toDomain(dto);
     return mapper.toDto(repo.save(faculty));
   }
 
+  @Override
   @Transactional
   public FacultyDto update(UUID id, UpdateFacultyDto dto) {
     Faculty e =
         repo.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("faculty not found: " + id));
 
-    mapper.updateEntity(dto, e);
-    return mapper.toDto(e);
+    Faculty updated = mapper.updateDomain(dto, e);
+    return mapper.toDto(repo.save(updated));
   }
 
+  @Override
   @Transactional
   public void delete(UUID id) {
-    Faculty dep =
-            repo
-                    .findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("department not found: " + id));
-
-    repo.delete(dep);
+    if (!repo.existsById(id)) {
+      throw new EntityNotFoundException("faculty not found: " + id);
+    }
+    repo.deleteById(id);
   }
-
-
 }

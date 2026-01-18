@@ -1,9 +1,9 @@
 package com.khasanshin.organizationservice.controller;
 
+import com.khasanshin.organizationservice.application.DepartmentUseCase;
 import com.khasanshin.organizationservice.dto.CreateDepartmentDto;
 import com.khasanshin.organizationservice.dto.DepartmentDto;
 import com.khasanshin.organizationservice.dto.UpdateDepartmentDto;
-import com.khasanshin.organizationservice.service.DepartmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Department", description = "Кафедры/департаменты (CRUD, назначение заведующего)")
 public class DepartmentController {
 
-  private final DepartmentService service;
+  private final DepartmentUseCase service;
 
   @Operation(
       summary = "Список департаментов (пагинация)",

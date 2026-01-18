@@ -5,7 +5,7 @@
     import com.khasanshin.organizationservice.dto.CreatePositionDto;
     import com.khasanshin.organizationservice.dto.PositionDto;
     import com.khasanshin.organizationservice.dto.UpdatePositionDto;
-    import com.khasanshin.organizationservice.service.PositionService;
+    import com.khasanshin.organizationservice.application.PositionUseCase;
     import jakarta.persistence.EntityNotFoundException;
     import org.junit.jupiter.api.Test;
     import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@
         @Autowired MockMvc mvc;
         @Autowired ObjectMapper mapper;
 
-        @MockitoBean PositionService positionService;
+        @MockitoBean PositionUseCase positionService;
 
         private static RequestPostProcessor asHr() {
             return SecurityMockMvcRequestPostProcessors

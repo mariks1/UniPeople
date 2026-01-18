@@ -5,7 +5,7 @@ import com.khasanshin.organizationservice.controller.FacultyController;
 import com.khasanshin.organizationservice.dto.CreateFacultyDto;
 import com.khasanshin.organizationservice.dto.FacultyDto;
 import com.khasanshin.organizationservice.dto.UpdateFacultyDto;
-import com.khasanshin.organizationservice.service.FacultyService;
+import com.khasanshin.organizationservice.application.FacultyUseCase;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ class FacultyControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
 
-    @MockitoBean FacultyService service;
+@MockitoBean FacultyUseCase service;
 
     @MockitoBean
     JwtDecoder jwtDecoder;
