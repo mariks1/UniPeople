@@ -2,8 +2,9 @@ package com.khasanshin.notificationservice.mapper;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.khasanshin.notificationservice.entity.NotificationEvent;
+import com.khasanshin.notificationservice.domain.model.NotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.mapstruct.Named;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,6 +13,7 @@ public class NotificationViewMapper {
 
     private final ObjectMapper mapper;
 
+    @Named("title")
     public String title(NotificationEvent e) {
         try {
             JsonNode root = mapper.readTree(e.getPayload());

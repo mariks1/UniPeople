@@ -1,11 +1,11 @@
 package com.khasanshin.notificationservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.khasanshin.notificationservice.application.NotificationQueryUseCase;
 import com.khasanshin.notificationservice.config.PermissionGuard;
 import com.khasanshin.notificationservice.controller.NotificationController;
 import com.khasanshin.notificationservice.dto.InboxItemDto;
 import com.khasanshin.notificationservice.dto.NotificationEventDto;
-import com.khasanshin.notificationservice.service.NotificationQueryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -37,7 +37,7 @@ class NotificationControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
 
-    @MockitoBean NotificationQueryService service;
+    @MockitoBean NotificationQueryUseCase service;
     @MockitoBean JwtDecoder jwtDecoder;
 
     private static RequestPostProcessor asEmployee(UUID employeeId) {
@@ -178,7 +178,7 @@ class NotificationControllerTest {
                         .with(asEmployee(me)))
                 .andExpect(status().isNoContent());
 
-        verify(service).markAllRead(eq(me), any(Instant.class));
+        verify(service).markAllReadForUser(eq(me), argThat(s -> s.contains("EMPLOYEE")), any(Instant.class));
     }
 
     @Test

@@ -1,10 +1,10 @@
 package com.khasanshin.organizationservice.unit;
 
+import com.khasanshin.organizationservice.application.FacultyApplicationService;
+import com.khasanshin.organizationservice.domain.model.Faculty;
+import com.khasanshin.organizationservice.domain.port.FacultyRepositoryPort;
 import com.khasanshin.organizationservice.dto.*;
-import com.khasanshin.organizationservice.entity.Faculty;
 import com.khasanshin.organizationservice.mapper.FacultyMapper;
-import com.khasanshin.organizationservice.repository.FacultyRepository;
-import com.khasanshin.organizationservice.service.FacultyService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,21 +30,21 @@ public class FacultyServiceTest {
 
 
     @Mock
-    FacultyRepository facultyRepository;
+    FacultyRepositoryPort facultyRepository;
     @Mock
     FacultyMapper mapper;
 
-    FacultyService service;
+    FacultyApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new FacultyService(facultyRepository, mapper);
+        service = new FacultyApplicationService(facultyRepository, mapper);
     }
 
     @Test
     void get_ok() {
         UUID id = UUID.randomUUID();
-        Faculty f = new Faculty();
+        Faculty f = Faculty.builder().id(id).code("C1").name("N").build();
         when(facultyRepository.findById(id)).thenReturn(Optional.of(f));
         when(mapper.toDto(f)).thenReturn(FacultyDto.builder().build());
 
@@ -63,9 +63,9 @@ public class FacultyServiceTest {
                 .name("Fac").code("D1")
                 .build();
 
-        Faculty entity = new Faculty();
-        Faculty saved = new Faculty();
-        when(mapper.toEntity(dto)).thenReturn(entity);
+        Faculty entity = Faculty.builder().code("C1").name("N").build();
+        Faculty saved = entity.toBuilder().id(UUID.randomUUID()).build();
+        when(mapper.toDomain(dto)).thenReturn(entity);
         when(facultyRepository.save(entity)).thenReturn(saved);
         when(mapper.toDto(saved)).thenReturn(FacultyDto.builder().build());
 
@@ -81,24 +81,29 @@ public class FacultyServiceTest {
                 .name("NewName").code("rand")
                 .build();
 
-        Faculty e = new Faculty();
-        when(facultyRepository.findById(id)).thenReturn(Optional.of(e));
-        when(mapper.toDto(e)).thenReturn(FacultyDto.builder().build());
+        Faculty existing = Faculty.builder().id(id).code("OLD").name("Old").build();
+        Faculty updated = existing.toBuilder().name("NewName").code("rand").build();
+
+        when(facultyRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(mapper.updateDomain(dto, existing)).thenReturn(updated);
+        when(facultyRepository.save(updated)).thenReturn(updated);
+        when(mapper.toDto(updated)).thenReturn(FacultyDto.builder().build());
 
         assertNotNull(service.update(id, dto));
 
-        verify(mapper, times(1)).updateEntity(dto, e);
+        verify(mapper, times(1)).updateDomain(dto, existing);
+        verify(facultyRepository).save(updated);
     }
 
     @Test
     void delete_ok() {
         UUID id = UUID.randomUUID();
-        Faculty dep = spy(new Faculty());
-        when(facultyRepository.findById(id)).thenReturn(Optional.of(dep));
+        Faculty dep = Faculty.builder().id(id).code("C").name("N").build();
+        when(facultyRepository.existsById(id)).thenReturn(true);
 
         service.delete(id);
 
-        verify(facultyRepository).delete(dep);
+        verify(facultyRepository).deleteById(id);
     }
 
 

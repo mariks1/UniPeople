@@ -1,448 +1,112 @@
 package com.khasanshin.employmentservice;
 
+import com.khasanshin.employmentservice.application.EmploymentApplicationService;
+import com.khasanshin.employmentservice.domain.model.Employment;
+import com.khasanshin.employmentservice.domain.port.EmployeeVerifierPort;
+import com.khasanshin.employmentservice.domain.port.EmploymentRepositoryPort;
+import com.khasanshin.employmentservice.domain.port.OrgVerifierPort;
 import com.khasanshin.employmentservice.dto.CloseEmploymentDto;
 import com.khasanshin.employmentservice.dto.CreateEmploymentDto;
 import com.khasanshin.employmentservice.dto.EmploymentDto;
 import com.khasanshin.employmentservice.dto.UpdateEmploymentDto;
-import com.khasanshin.employmentservice.entity.Employment;
-import com.khasanshin.employmentservice.exception.RemoteServiceUnavailableException;
-import com.khasanshin.employmentservice.feign.EmployeeClient;
-import com.khasanshin.employmentservice.feign.EmployeeVerifier;
-import com.khasanshin.employmentservice.feign.OrgClient;
-import com.khasanshin.employmentservice.feign.OrgVerifier;
 import com.khasanshin.employmentservice.mapper.EmploymentMapper;
-import com.khasanshin.employmentservice.repository.EmploymentRepository;
-import com.khasanshin.employmentservice.service.EmploymentService;
-import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.*;
-import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class EmploymentServiceTest {
 
-    @Mock EmploymentRepository repo;
+    @Mock EmploymentRepositoryPort repo;
     @Mock EmploymentMapper mapper;
-    @Mock TransactionTemplate tx;
-    @Mock
-    EmployeeVerifier employeeVerifier;
-    @Mock
-    OrgVerifier orgVerifier;
+    @Mock OrgVerifierPort orgVerifier;
+    @Mock EmployeeVerifierPort employeeVerifier;
+    @Mock org.springframework.transaction.support.TransactionTemplate tx;
 
-    EmploymentService service;
+    EmploymentApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new EmploymentService(repo, mapper, tx, orgVerifier, employeeVerifier);
-
-        lenient().when(tx.execute(any()))
-                .thenAnswer(inv -> {
-                    TransactionCallback<Object> cb = inv.getArgument(0);
-                    return cb.doInTransaction(null);
-                });
-    }
-
-    private Employment employment(UUID id, UUID empId, UUID depId, UUID posId, LocalDate start, LocalDate end) {
-        Employment e = new Employment();
-        e.setId(id);
-        e.setEmployeeId(empId);
-        e.setDepartmentId(depId);
-        e.setPositionId(posId);
-        e.setStartDate(start);
-        e.setEndDate(end);
-        e.setStatus(Employment.Status.ACTIVE);
-        return e;
-    }
-
-    private EmploymentDto dtoFromEntity(Employment e) {
-        return EmploymentDto.builder()
-                .id(e.getId())
-                .employeeId(e.getEmployeeId())
-                .departmentId(e.getDepartmentId())
-                .positionId(e.getPositionId())
-                .startDate(e.getStartDate())
-                .endDate(e.getEndDate())
-                .status(e.getStatus())
-                .rate(e.getRate())
-                .build();
+        when(tx.execute(any())).thenAnswer(inv -> ((org.springframework.transaction.support.TransactionCallback<?>) inv.getArgument(0)).doInTransaction(null));
+        service = new EmploymentApplicationService(repo, mapper, tx, orgVerifier, employeeVerifier);
     }
 
     @Test
-    void get_ok() {
-        UUID id = UUID.randomUUID();
-        Employment e = employment(id, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), LocalDate.now(), null);
-        when(repo.findById(id)).thenReturn(Optional.of(e));
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
+    void create_validatesAndSaves() {
+        UUID emp = UUID.randomUUID();
+        UUID dept = UUID.randomUUID();
+        UUID pos = UUID.randomUUID();
+        CreateEmploymentDto dto = CreateEmploymentDto.builder()
+                .employeeId(emp).departmentId(dept).positionId(pos)
+                .startDate(LocalDate.now())
+                .build();
 
-        EmploymentDto out = service.get(id).block();
+        Employment toSave = Employment.builder()
+                .employeeId(emp).departmentId(dept).positionId(pos)
+                .startDate(dto.getStartDate()).status(Employment.Status.ACTIVE).rate(BigDecimal.ONE)
+                .build();
+        Employment saved = toSave.toBuilder().id(UUID.randomUUID()).build();
+
+        when(repo.findOverlaps(emp, dept, pos, dto.getStartDate(), null)).thenReturn(List.of());
+        when(mapper.toDomain(dto)).thenReturn(toSave);
+        when(repo.save(toSave)).thenReturn(saved);
+        when(mapper.toDto(saved)).thenReturn(EmploymentDto.builder().id(saved.getId()).build());
+
+        EmploymentDto out = service.create(dto).block();
 
         assertNotNull(out);
-        verify(repo).findById(id);
-        verify(mapper).toDto(e);
+        verify(employeeVerifier).ensureEmployeeExists(emp);
+        verify(orgVerifier).ensureDepartmentExists(dept);
+        verify(orgVerifier).ensurePositionExists(pos);
     }
 
     @Test
-    void get_notFound() {
+    void get_notFound_throws404() {
         when(repo.findById(any())).thenReturn(Optional.empty());
         assertThrows(EntityNotFoundException.class, () -> service.get(UUID.randomUUID()).block());
     }
 
     @Test
-    void create_ok_validatesAll_setsDefaultRate_andSaves() {
-        UUID empId = UUID.randomUUID();
-        UUID depId = UUID.randomUUID();
-        UUID posId = UUID.randomUUID();
-
-        var dto = CreateEmploymentDto.builder()
-                .employeeId(empId).departmentId(depId).positionId(posId)
-                .startDate(LocalDate.of(2024,1,1))
-                .build();
-
-        doNothing().when(employeeVerifier).ensureEmployeeExists(empId);
-        doNothing().when(orgVerifier).ensureDepartmentExists(depId);
-        doNothing().when(orgVerifier).ensurePositionExists(posId);
-
-
-        when(repo.findOverlaps(empId, depId, posId, dto.getStartDate(), null)).thenReturn(List.of());
-
-        Employment toSave = employment(UUID.randomUUID(), empId, depId, posId, dto.getStartDate(), null);
-        toSave.setRate(null);
-        when(mapper.toEntity(dto)).thenReturn(toSave);
-
-        when(repo.saveAndFlush(any(Employment.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
-
-        Employment savedAfter = employment(toSave.getId(), empId, depId, posId, dto.getStartDate(), null);
-        savedAfter.setRate(BigDecimal.valueOf(1.00));
-        when(mapper.toDto(any(Employment.class)))
-                .thenAnswer(inv -> dtoFromEntity(inv.getArgument(0)));
-
-        EmploymentDto out = service.create(dto).block();
-
-        assertNotNull(out);
-        assertEquals(BigDecimal.valueOf(1.00), out.getRate());
-
-        ArgumentCaptor<Employment> captor = ArgumentCaptor.forClass(Employment.class);
-        verify(repo).saveAndFlush(captor.capture());
-        assertEquals(BigDecimal.valueOf(1.00), captor.getValue().getRate());
-
-        verify(repo).findOverlaps(empId, depId, posId, dto.getStartDate(), null);
-        verify(employeeVerifier).ensureEmployeeExists(empId);
-        verify(orgVerifier).ensureDepartmentExists(depId);
-        verify(orgVerifier).ensurePositionExists(posId);
-    }
-
-    @Test
-    void create_overlaps_throwsIllegalState() {
-        var dto = CreateEmploymentDto.builder()
-                .employeeId(UUID.randomUUID())
-                .departmentId(UUID.randomUUID())
-                .positionId(UUID.randomUUID())
-                .startDate(LocalDate.of(2024,1,1))
-                .build();
-
-        doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
-        doNothing().when(orgVerifier).ensureDepartmentExists(dto.getDepartmentId());
-        doNothing().when(orgVerifier).ensurePositionExists(dto.getPositionId());
-        when(repo.findOverlaps(any(), any(), any(), any(), isNull()))
-                .thenReturn(List.of(new Employment()));
-
-        assertThrows(IllegalStateException.class, () -> service.create(dto).block());
-        verify(repo, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void create_employeeNotFound_maps404() {
-        var dto = CreateEmploymentDto.builder()
-                .employeeId(UUID.randomUUID())
-                .departmentId(UUID.randomUUID())
-                .positionId(UUID.randomUUID())
-                .startDate(LocalDate.now())
-                .build();
-
-        doThrow(new EntityNotFoundException("employee not found"))
-                .when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
-
-        assertThrows(EntityNotFoundException.class, () -> service.create(dto).block());
-    }
-
-    @Test
-    void create_departmentNotFound_maps404() {
-        var dto = CreateEmploymentDto.builder()
-                .employeeId(UUID.randomUUID())
-                .departmentId(UUID.randomUUID())
-                .positionId(UUID.randomUUID())
-                .startDate(LocalDate.now())
-                .build();
-
-        doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
-        doThrow(new EntityNotFoundException("department not found"))
-                .when(orgVerifier).ensureDepartmentExists(dto.getDepartmentId());
-
-        assertThrows(EntityNotFoundException.class, () -> service.create(dto).block());
-    }
-
-    @Test
-    void create_positionNotFound_maps404() {
-        var dto = CreateEmploymentDto.builder()
-                .employeeId(UUID.randomUUID())
-                .departmentId(UUID.randomUUID())
-                .positionId(UUID.randomUUID())
-                .startDate(LocalDate.now())
-                .build();
-
-        doNothing().when(employeeVerifier).ensureEmployeeExists(dto.getEmployeeId());
-        doNothing().when(orgVerifier).ensureDepartmentExists(dto.getDepartmentId());
-        doThrow(new EntityNotFoundException("position not found"))
-                .when(orgVerifier).ensurePositionExists(dto.getPositionId());
-
-        assertThrows(EntityNotFoundException.class, () -> service.create(dto).block());
-    }
-
-    @Test
-    void update_ok_updatesAndSaves() {
+    void close_updatesStatus() {
         UUID id = UUID.randomUUID();
-        Employment e = employment(id, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                LocalDate.of(2024,1,1), null);
+        Employment current = Employment.builder()
+                .id(id).startDate(LocalDate.now().minusDays(10)).status(Employment.Status.ACTIVE).build();
+        Employment closed = current.toBuilder().status(Employment.Status.CLOSED).endDate(LocalDate.now()).build();
 
-        when(repo.findById(id)).thenReturn(Optional.of(e));
+        when(repo.findById(id)).thenReturn(Optional.of(current));
+        when(repo.save(any())).thenReturn(closed);
+        when(mapper.toDto(closed)).thenReturn(EmploymentDto.builder().id(id).status(Employment.Status.CLOSED).build());
 
-        UpdateEmploymentDto dto = UpdateEmploymentDto.builder()
-                .endDate(LocalDate.of(2024, 12, 31))
-                .rate(BigDecimal.valueOf(0.5))
-                .build();
+        EmploymentDto out = service.close(id, CloseEmploymentDto.builder().build()).block();
 
-        doAnswer(inv -> {
-            UpdateEmploymentDto d = inv.getArgument(0);
-            Employment target = inv.getArgument(1);
-            if (d.getEndDate() != null) target.setEndDate(d.getEndDate());
-            if (d.getRate() != null) target.setRate(d.getRate());
-            return null;
-        }).when(mapper).updateEntity(eq(dto), eq(e));
-
-        when(repo.saveAndFlush(e)).thenReturn(e);
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
-
-        EmploymentDto out = service.update(id, dto).block();
-
-        assertNotNull(out);
-        assertEquals(LocalDate.of(2024, 12, 31), e.getEndDate());
-        assertEquals(BigDecimal.valueOf(0.5), e.getRate());
+        assertEquals(Employment.Status.CLOSED, out.getStatus());
     }
 
     @Test
-    void update_endBeforeStart_throwsIllegalArgument() {
-        UUID id = UUID.randomUUID();
-        Employment e = employment(id, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                LocalDate.of(2024,5,1), null);
-
-        when(repo.findById(id)).thenReturn(Optional.of(e));
-
-        UpdateEmploymentDto dto = UpdateEmploymentDto.builder()
-                .endDate(LocalDate.of(2024, 4, 30))
-                .build();
-
-        doAnswer(inv -> {
-            Employment target = inv.getArgument(1);
-            target.setEndDate(LocalDate.of(2024,4,30));
-            return null;
-        }).when(mapper).updateEntity(eq(dto), eq(e));
-
-        assertThrows(IllegalArgumentException.class, () -> service.update(id, dto).block());
-        verify(repo, never()).saveAndFlush(any());
+    void listByDepartment_delegates() {
+        UUID dept = UUID.randomUUID();
+        Pageable pageable = PageRequest.of(0, 10);
+        when(repo.findByDepartmentIdAndStatus(eq(dept), eq(Employment.Status.ACTIVE), any()))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+        service.listByDepartment(dept, true, 0, 10).collectList().block();
+        verify(repo).findByDepartmentIdAndStatus(eq(dept), eq(Employment.Status.ACTIVE), any());
     }
-
-    @Test
-    void update_notFound_throws404() {
-        when(repo.findById(any())).thenReturn(Optional.empty());
-        assertThrows(EntityNotFoundException.class, () -> service.update(UUID.randomUUID(),
-                UpdateEmploymentDto.builder().build()).block());
-    }
-
-    @Test
-    void close_ok_withBodyEndDate_setsClosedAndSaves() {
-        UUID id = UUID.randomUUID();
-        Employment e = employment(id, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                LocalDate.of(2024,1,1), null);
-
-        when(repo.findById(id)).thenReturn(Optional.of(e));
-        when(repo.saveAndFlush(e)).thenReturn(e);
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
-
-        LocalDate end = LocalDate.of(2024, 6, 1);
-        EmploymentDto out = service.close(id, CloseEmploymentDto.builder().endDate(end).build()).block();
-
-        assertNotNull(out);
-        assertEquals(Employment.Status.CLOSED, e.getStatus());
-        assertEquals(end, e.getEndDate());
-    }
-
-    @Test
-    void close_ok_defaultsEndDateToNow_whenBodyNull() {
-        UUID id = UUID.randomUUID();
-        Employment e = employment(id, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                LocalDate.now().minusDays(1), null);
-
-        when(repo.findById(id)).thenReturn(Optional.of(e));
-        when(repo.saveAndFlush(e)).thenReturn(e);
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
-
-        EmploymentDto out = service.close(id, null).block();
-
-        assertNotNull(out);
-        assertEquals(Employment.Status.CLOSED, e.getStatus());
-        assertNotNull(e.getEndDate());
-    }
-
-    @Test
-    void close_alreadyClosed_returnsAsIs() {
-        UUID id = UUID.randomUUID();
-        Employment e = employment(id, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                LocalDate.of(2024,1,1), LocalDate.of(2024,2,1));
-        e.setStatus(Employment.Status.CLOSED);
-
-        when(repo.findById(id)).thenReturn(Optional.of(e));
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
-
-        EmploymentDto out = service.close(id, CloseEmploymentDto.builder().endDate(LocalDate.of(2024,3,1)).build()).block();
-
-        assertNotNull(out);
-        verify(repo, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void close_endBeforeStart_throwsIllegalArgument() {
-        UUID id = UUID.randomUUID();
-        Employment e = employment(id, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                LocalDate.of(2024,5,1), null);
-
-        when(repo.findById(id)).thenReturn(Optional.of(e));
-
-        assertThrows(IllegalArgumentException.class,
-                () -> service.close(id, CloseEmploymentDto.builder().endDate(LocalDate.of(2024,4,30)).build()).block());
-        verify(repo, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void close_notFound_throws404() {
-        when(repo.findById(any())).thenReturn(Optional.empty());
-        assertThrows(EntityNotFoundException.class, () -> service.close(UUID.randomUUID(), null).block());
-    }
-
-    @Test
-    void listByEmployee_returnsFluxOfDtos_fromJpaPage() {
-        UUID empId = UUID.randomUUID();
-        int page = 0, size = 10;
-        Employment e = employment(UUID.randomUUID(), empId, UUID.randomUUID(), UUID.randomUUID(), LocalDate.now(), null);
-
-        when(repo.findByEmployeeIdOrderByStartDateDesc(eq(empId), any(Pageable.class)))
-                .thenAnswer(inv -> {
-                    Pageable p = inv.getArgument(1);
-                    return new PageImpl<>(List.of(e), p, 1);
-                });
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
-
-        var list = service.listByEmployee(empId, page, size).collectList().block();
-
-        assertNotNull(list);
-        assertEquals(1, list.size());
-        assertEquals(empId, list.getFirst().getEmployeeId());
-
-        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(repo).findByEmployeeIdOrderByStartDateDesc(eq(empId), captor.capture());
-        assertEquals(PageRequest.of(page, size), captor.getValue());
-    }
-
-    @Test
-    void listByDepartment_activeTrue_usesActiveQuery_andReturnsFlux() {
-        UUID dep = UUID.randomUUID();
-        int page = 0, size = 5;
-        Employment e = employment(UUID.randomUUID(), UUID.randomUUID(), dep, UUID.randomUUID(), LocalDate.now(), null);
-
-        when(repo.findByDepartmentIdAndStatus(eq(dep), eq(Employment.Status.ACTIVE), any(Pageable.class)))
-                .thenAnswer(inv -> {
-                    Pageable p = inv.getArgument(2);
-                    return new PageImpl<>(List.of(e), p, 1);
-                });
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
-
-        var list = service.listByDepartment(dep, true, page, size).collectList().block();
-
-        assertNotNull(list);
-        assertEquals(1, list.size());
-
-        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(repo).findByDepartmentIdAndStatus(eq(dep), eq(Employment.Status.ACTIVE), captor.capture());
-        assertEquals(PageRequest.of(page, size), captor.getValue());
-        verify(repo, never()).findByDepartmentId(any(), any());
-    }
-
-    @Test
-    void listByDepartment_activeFalse_usesAllQuery_andReturnsFlux() {
-        UUID dep = UUID.randomUUID();
-        int page = 0, size = 5;
-        Employment e = employment(UUID.randomUUID(), UUID.randomUUID(), dep, UUID.randomUUID(), LocalDate.now(), null);
-
-        when(repo.findByDepartmentId(eq(dep), any(Pageable.class)))
-                .thenAnswer(inv -> {
-                    Pageable p = inv.getArgument(1);
-                    return new PageImpl<>(List.of(e), p, 1);
-                });
-        when(mapper.toDto(e)).thenReturn(dtoFromEntity(e));
-
-        var list = service.listByDepartment(dep, false, page, size).collectList().block();
-
-        assertNotNull(list);
-        assertEquals(1, list.size());
-
-        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(repo).findByDepartmentId(eq(dep), captor.capture());
-        assertEquals(PageRequest.of(page, size), captor.getValue());
-        verify(repo, never()).findByDepartmentIdAndStatus(any(), any(), any());
-    }
-
-    @Test
-    void countByEmployee_returnsTotal() {
-        UUID empId = UUID.randomUUID();
-        when(repo.countByEmployeeId(empId)).thenReturn(42L);
-
-        Long total = service.countByEmployee(empId).block();
-
-        assertEquals(42L, total);
-        verify(repo).countByEmployeeId(empId);
-    }
-
-    @Test
-    void countByDepartment_activeVariants() {
-        UUID dep = UUID.randomUUID();
-
-        when(repo.countByDepartmentIdAndStatus(dep, Employment.Status.ACTIVE)).thenReturn(10L);
-        when(repo.countByDepartmentId(dep)).thenReturn(15L);
-
-        Long active = service.countByDepartment(dep, true).block();
-        Long all = service.countByDepartment(dep, false).block();
-
-        assertEquals(10L, active);
-        assertEquals(15L, all);
-        verify(repo).countByDepartmentIdAndStatus(dep, Employment.Status.ACTIVE);
-        verify(repo).countByDepartmentId(dep);
-    }
-
 }

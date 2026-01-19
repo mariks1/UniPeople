@@ -1,8 +1,11 @@
 package com.khasanshin.notificationservice.controller;
 
+import com.khasanshin.notificationservice.application.NotificationQueryUseCase;
 import com.khasanshin.notificationservice.config.PermissionGuard;
 import com.khasanshin.notificationservice.dto.InboxItemDto;
-import com.khasanshin.notificationservice.service.NotificationQueryService;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,16 +14,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationQueryService service;
+    private final NotificationQueryUseCase service;
     private final PermissionGuard perm;
 
     @GetMapping("/inbox")

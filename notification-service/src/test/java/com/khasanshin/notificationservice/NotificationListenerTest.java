@@ -1,11 +1,13 @@
 package com.khasanshin.notificationservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.khasanshin.notificationservice.entity.NotificationEvent;
-import com.khasanshin.notificationservice.entity.NotificationInbox;
-import com.khasanshin.notificationservice.event.NotificationListener;
-import com.khasanshin.notificationservice.repository.NotificationEventRepository;
-import com.khasanshin.notificationservice.repository.NotificationInboxRepository;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.khasanshin.notificationservice.application.NotificationIngestApplicationService;
+import com.khasanshin.notificationservice.domain.model.NotificationEvent;
+import com.khasanshin.notificationservice.domain.model.NotificationInbox;
+import com.khasanshin.notificationservice.domain.model.NotificationMessage;
+import com.khasanshin.notificationservice.domain.port.NotificationEventRepositoryPort;
+import com.khasanshin.notificationservice.domain.port.NotificationInboxRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -21,16 +23,17 @@ import static org.mockito.Mockito.*;
 
 class NotificationListenerTest {
 
-    @Mock NotificationEventRepository eventRepo;
-    @Mock NotificationInboxRepository inboxRepo;
+    @Mock NotificationEventRepositoryPort eventRepo;
+    @Mock NotificationInboxRepositoryPort inboxRepo;
 
     ObjectMapper mapper = new ObjectMapper();
-    NotificationListener listener;
+    NotificationIngestApplicationService service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        listener = new NotificationListener(eventRepo, inboxRepo, mapper);
+        mapper.registerModule(new JavaTimeModule());
+        service = new NotificationIngestApplicationService(eventRepo, inboxRepo, mapper);
     }
 
     @Test
@@ -52,7 +55,8 @@ class NotificationListenerTest {
         when(eventRepo.findByEventId(eventId)).thenReturn(Optional.empty());
         when(eventRepo.save(any(NotificationEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        listener.handle(json);
+        NotificationMessage msg = mapper.readValue(json, NotificationMessage.class);
+        service.handle(msg);
 
         verify(eventRepo).save(any(NotificationEvent.class));
 
@@ -85,7 +89,8 @@ class NotificationListenerTest {
         when(eventRepo.findByEventId(eventId)).thenReturn(Optional.empty());
         when(eventRepo.save(any(NotificationEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        listener.handle(json);
+        NotificationMessage msg = mapper.readValue(json, NotificationMessage.class);
+        service.handle(msg);
 
         ArgumentCaptor<NotificationInbox> captor = ArgumentCaptor.forClass(NotificationInbox.class);
         verify(inboxRepo, times(3)).save(captor.capture());
@@ -115,7 +120,8 @@ class NotificationListenerTest {
         when(eventRepo.findByEventId(eventId)).thenReturn(Optional.empty());
         when(eventRepo.save(any(NotificationEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        listener.handle(json);
+        NotificationMessage msg = mapper.readValue(json, NotificationMessage.class);
+        service.handle(msg);
 
         ArgumentCaptor<NotificationInbox> captor = ArgumentCaptor.forClass(NotificationInbox.class);
         verify(inboxRepo, times(2)).save(captor.capture());
@@ -142,7 +148,8 @@ class NotificationListenerTest {
         when(eventRepo.findByEventId(eventId)).thenReturn(Optional.empty());
         when(eventRepo.save(any(NotificationEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        listener.handle(json);
+        NotificationMessage msg = mapper.readValue(json, NotificationMessage.class);
+        service.handle(msg);
 
         verify(eventRepo).save(any(NotificationEvent.class));
         verify(inboxRepo, never()).save(any());
@@ -167,19 +174,28 @@ class NotificationListenerTest {
         when(eventRepo.findByEventId(eventId)).thenReturn(Optional.empty());
         when(eventRepo.save(any(NotificationEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        doThrow(new DataIntegrityViolationException("dup"))
-                .doNothing()
-                .when(inboxRepo).save(any(NotificationInbox.class));
+        NotificationMessage msg = mapper.readValue(json, NotificationMessage.class);
 
-        assertDoesNotThrow(() -> listener.handle(json));
+        NotificationInbox stored = NotificationInbox.builder()
+                .id(UUID.randomUUID())
+                .event(NotificationEvent.builder().eventId(eventId).createdAt(java.time.Instant.now()).source("employee-service").eventType("EMPLOYEE_CREATED").payload("{}").build())
+                .deliveredAt(java.time.Instant.now())
+                .build();
+
+        when(inboxRepo.save(any(NotificationInbox.class)))
+                .thenThrow(new DataIntegrityViolationException("dup"))
+                .thenReturn(stored);
+
+        assertDoesNotThrow(() -> service.handle(msg));
         verify(inboxRepo, times(2)).save(any(NotificationInbox.class));
     }
 
     @Test
-    void handle_throwsOnInvalidEventId() {
+    void handle_throwsOnInvalidEventId() throws Exception {
         String json = """
-        {"eventId":"not-a-uuid","eventType":"X","payload":{}}
+        {"eventType":"X","payload":{}}
         """;
-        assertThrows(IllegalArgumentException.class, () -> listener.handle(json));
+        NotificationMessage msg = mapper.readValue(json, NotificationMessage.class);
+        assertThrows(IllegalArgumentException.class, () -> service.handle(msg));
     }
 }

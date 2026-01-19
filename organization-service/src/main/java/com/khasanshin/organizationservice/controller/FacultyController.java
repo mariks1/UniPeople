@@ -1,9 +1,9 @@
 package com.khasanshin.organizationservice.controller;
 
+import com.khasanshin.organizationservice.application.FacultyUseCase;
 import com.khasanshin.organizationservice.dto.CreateFacultyDto;
 import com.khasanshin.organizationservice.dto.FacultyDto;
 import com.khasanshin.organizationservice.dto.UpdateFacultyDto;
-import com.khasanshin.organizationservice.service.FacultyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Faculty", description = "Факультеты: CRUD")
 public class FacultyController {
 
-  private final FacultyService service;
+  private final FacultyUseCase service;
 
   @Operation(summary = "Получить факультет по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})

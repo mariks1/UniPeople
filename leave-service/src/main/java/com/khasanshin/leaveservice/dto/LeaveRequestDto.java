@@ -2,11 +2,10 @@ package com.khasanshin.leaveservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.khasanshin.leaveservice.domain.model.LeaveRequest;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-
-import com.khasanshin.leaveservice.entity.LeaveRequest;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;

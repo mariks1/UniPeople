@@ -1,9 +1,9 @@
 package com.khasanshin.authservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.khasanshin.authservice.application.UserUseCase;
 import com.khasanshin.authservice.controller.UserController;
 import com.khasanshin.authservice.dto.*;
-import com.khasanshin.authservice.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -42,7 +42,7 @@ class UserControllerTest {
     static class MethodSec { }
 
     @MockitoBean
-    UserService userService;
+    UserUseCase userUseCase;
 
     @Test
     @WithMockUser(roles = {"EMPLOYEE"})
@@ -68,7 +68,7 @@ class UserControllerTest {
                 .build();
         UUID id = out.getId();
 
-        given(userService.create(any(CreateUserRequestDto.class))).willReturn(out);
+        given(userUseCase.create(any(CreateUserRequestDto.class))).willReturn(out);
 
 
         mvc.perform(post("/api/v1/auth/users")
@@ -94,7 +94,7 @@ class UserControllerTest {
                 .id(id)
                 .roles(Set.of("EMPLOYEE", "HR"))
                 .build();
-        given(userService.setRoles(eq(id), any(UpdateUserRolesRequestDto.class))).willReturn(out);
+        given(userUseCase.setRoles(eq(id), any(UpdateUserRolesRequestDto.class))).willReturn(out);
 
         mvc.perform(put("/api/v1/auth/users/{id}/roles", id)
                         .with(csrf())
@@ -114,7 +114,7 @@ class UserControllerTest {
                 .id(id)
                 .managedDeptIds(body)
                 .build();
-        given(userService.setManagedDepartments(eq(id), anySet())).willReturn(out);
+        given(userUseCase.setManagedDepartments(eq(id), anySet())).willReturn(out);
 
         mvc.perform(put("/api/v1/auth/users/{id}/managed-departments", id)
                         .with(csrf())
@@ -152,7 +152,7 @@ class UserControllerTest {
                 .id(id)
                 .enabled(true)
                 .build();
-        given(userService.setEnabled(id, true)).willReturn(out);
+        given(userUseCase.setEnabled(id, true)).willReturn(out);
 
         mvc.perform(post("/api/v1/auth/users/{id}/enabled", id)
                         .with(csrf())
@@ -171,7 +171,7 @@ class UserControllerTest {
                 .roles(Set.of("EMPLOYEE"))
                 .enabled(true)
                 .build();
-        given(userService.get(id)).willReturn(out);
+        given(userUseCase.get(id)).willReturn(out);
 
         mvc.perform(get("/api/v1/auth/users/{id}", id))
                 .andExpect(status().isOk())
@@ -183,7 +183,7 @@ class UserControllerTest {
     @WithMockUser(roles = {"SUPERVISOR"})
     void get_user_notFound_404() throws Exception {
         UUID id = UUID.randomUUID();
-        given(userService.get(id)).willThrow(new jakarta.persistence.EntityNotFoundException());
+        given(userUseCase.get(id)).willThrow(new jakarta.persistence.EntityNotFoundException());
         mvc.perform(get("/api/v1/auth/users/{id}", id))
                 .andExpect(status().isNotFound());
     }
@@ -194,7 +194,7 @@ class UserControllerTest {
         var u1 = UserDto.builder().id(UUID.randomUUID()).username("a").roles(Set.of()).enabled(true).build();
         var u2 = UserDto.builder().id(UUID.randomUUID()).username("b").roles(Set.of()).enabled(false).build();
         var page = new org.springframework.data.domain.PageImpl<>(java.util.List.of(u1, u2));
-        given(userService.findAll(any(org.springframework.data.domain.Pageable.class))).willReturn(page);
+        given(userUseCase.findAll(any(org.springframework.data.domain.Pageable.class))).willReturn(page);
 
         mvc.perform(get("/api/v1/auth/users")
                         .param("page","0").param("size","2"))
@@ -210,7 +210,7 @@ class UserControllerTest {
         UUID id = UUID.randomUUID();
         mvc.perform(delete("/api/v1/auth/users/{id}", id).with(csrf()))
                 .andExpect(status().isNoContent());
-        org.mockito.Mockito.verify(userService).delete(id);
+        org.mockito.Mockito.verify(userUseCase).delete(id);
     }
 
     @Test

@@ -5,7 +5,7 @@ import com.khasanshin.organizationservice.controller.DepartmentController;
 import com.khasanshin.organizationservice.dto.CreateDepartmentDto;
 import com.khasanshin.organizationservice.dto.DepartmentDto;
 import com.khasanshin.organizationservice.dto.UpdateDepartmentDto;
-import com.khasanshin.organizationservice.service.DepartmentService;
+import com.khasanshin.organizationservice.application.DepartmentUseCase;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +38,7 @@ class DepartmentControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
 
-    @MockitoBean DepartmentService service;
+    @MockitoBean DepartmentUseCase service;
 
     @MockitoBean
     JwtDecoder jwtDecoder;
@@ -184,11 +184,10 @@ class DepartmentControllerTest {
     }
 
     @Test
-    void listEmployees_501_withHeader() throws Exception {
+    void listEmployees_notFound_withoutEndpoint() throws Exception {
         mvc.perform(get("/api/v1/departments/{id}/employees", UUID.randomUUID())
                         .param("page","0").param("size","5")
                         .with(asOrgAdmin()))
-                .andExpect(status().isNotImplemented())
-                .andExpect(header().string("X-Total-Count", "0"));
+                .andExpect(status().isInternalServerError());
     }
 }

@@ -1,8 +1,8 @@
 package com.khasanshin.authservice;
 
 
-import com.khasanshin.authservice.entity.AppUser;
-import com.khasanshin.authservice.service.TokenService;
+import com.khasanshin.authservice.domain.model.User;
+import com.khasanshin.authservice.infrastructure.security.JwtTokenIssuerAdapter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,11 +34,11 @@ class TokenServiceTest {
     @Mock
     JwtEncoder encoder;
 
-    TokenService service;
+    JwtTokenIssuerAdapter service;
 
     @BeforeEach
     void setUp() {
-        service = new TokenService(encoder);
+        service = new JwtTokenIssuerAdapter(encoder);
         ReflectionTestUtils.setField(service, "issuer", "auth-service");
         ReflectionTestUtils.setField(service, "audience", "main-app");
     }
@@ -51,7 +51,7 @@ class TokenServiceTest {
         Set<UUID> managed = Set.of(UUID.randomUUID(), UUID.randomUUID());
 
 
-        AppUser user = AppUser.builder()
+        User user = User.builder()
                 .id(userId)
                 .roles(roles)
                 .employeeId(employeeId)

@@ -7,8 +7,9 @@ import com.khasanshin.dutyservice.dto.DutyAssignmentDto;
 import com.khasanshin.dutyservice.dto.DutyDto;
 import com.khasanshin.dutyservice.dto.UpdateDutyDto;
 import com.khasanshin.dutyservice.dto.AssignDutyDto;
-import com.khasanshin.dutyservice.service.DutyAssignmentService;
-import com.khasanshin.dutyservice.service.DutyService;
+import com.khasanshin.dutyservice.application.DutyAssignmentUseCase;
+import com.khasanshin.dutyservice.application.DutyUseCase;
+import com.khasanshin.dutyservice.event.DutyEventPublisher;
 import com.khasanshin.dutyservice.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,11 +45,14 @@ class DutyControllerTest {
     @Autowired ObjectMapper mapper;
 
     @MockitoBean
-    DutyService dutyService;
+    DutyUseCase dutyService;
     @MockitoBean
-    DutyAssignmentService assignmentService;
+    DutyAssignmentUseCase assignmentService;
     @MockitoBean
     JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private DutyEventPublisher publisher;
 
     private static RequestPostProcessor asHr() {
         return SecurityMockMvcRequestPostProcessors
@@ -233,8 +237,19 @@ class DutyControllerTest {
 
     @Test
     void unassign_204() throws Exception {
+        UUID deptId = UUID.randomUUID();
+        UUID assignmentId = UUID.randomUUID();
+        var removed = DutyAssignmentDto.builder()
+                .id(assignmentId)
+                .departmentId(deptId)
+                .employeeId(UUID.randomUUID())
+                .dutyId(UUID.randomUUID())
+                .build();
+
+        when(assignmentService.unassignAndReturn(deptId, assignmentId)).thenReturn(removed);
+
         mvc.perform(delete("/api/v1/duty/departments/{departmentId}/assignments/{assignmentId}",
-                        UUID.randomUUID(), UUID.randomUUID()).with(asHr()))
+                        deptId, assignmentId).with(asHr()))
                 .andExpect(status().isNoContent());
     }
 

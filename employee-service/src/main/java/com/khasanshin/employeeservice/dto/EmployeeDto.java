@@ -2,10 +2,9 @@ package com.khasanshin.employeeservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.khasanshin.employeeservice.domain.model.Employee;
 import java.time.Instant;
 import java.util.UUID;
-
-import com.khasanshin.employeeservice.entity.Employee;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;

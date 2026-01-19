@@ -1,9 +1,9 @@
 package com.khasanshin.leaveservice.controller;
 
+import com.khasanshin.leaveservice.application.LeaveTypeUseCase;
 import com.khasanshin.leaveservice.dto.CreateLeaveTypeDto;
 import com.khasanshin.leaveservice.dto.LeaveTypeDto;
 import com.khasanshin.leaveservice.dto.UpdateLeaveTypeDto;
-import com.khasanshin.leaveservice.service.LeaveService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,7 +28,7 @@ import reactor.core.publisher.Mono;
 @Tag(name = "LeaveType", description = "Справочник видов отпусков")
 public class LeaveTypeController {
 
-  private final LeaveService service;
+  private final LeaveTypeUseCase service;
 
   @Operation(
       summary = "Список типов отпусков (пагинация)",

@@ -1,12 +1,12 @@
 package com.khasanshin.leaveservice.controller;
 
+import com.khasanshin.leaveservice.application.LeaveRequestUseCase;
 import com.khasanshin.leaveservice.dto.CreateLeaveRequestDto;
 import com.khasanshin.leaveservice.dto.DecisionDto;
 import com.khasanshin.leaveservice.dto.LeaveRequestDto;
 import com.khasanshin.leaveservice.dto.UpdateLeaveRequestDto;
-import com.khasanshin.leaveservice.entity.LeaveRequest;
+import com.khasanshin.leaveservice.domain.model.LeaveRequest;
 import com.khasanshin.leaveservice.event.LeaveEventPublisher;
-import com.khasanshin.leaveservice.service.LeaveService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,23 +30,23 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/v1/leave-requests")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "LeaveRequest", description = "Заявки на отпуск: создание, правка, согласование")
+@Tag(name = "LeaveRequest", description = "Заявки на отпуск: создание, обновление, утверждение/отклонение, отмена")
 public class LeaveRequestController {
 
-  private final LeaveService service;
+  private final LeaveRequestUseCase service;
   private final LeaveEventPublisher publisher;
 
-  @Operation(summary = "Получить заявку на отпуск по ID")
+  @Operation(summary = "Получить заявку по ID")
   @ApiResponses({@ApiResponse(responseCode = "200"), @ApiResponse(responseCode = "404")})
   @GetMapping("/{id}")
   public Mono<LeaveRequestDto> get(@PathVariable("id") UUID id) {
     return service.get(id);
   }
 
-  @Operation(summary = "Создать заявку на отпуск")
+  @Operation(summary = "Создать заявку")
   @ApiResponses({
     @ApiResponse(responseCode = "201"),
-    @ApiResponse(responseCode = "400", description = "Неверные даты/пересечения/лимит"),
+    @ApiResponse(responseCode = "400", description = "Некорректные даты или пересечение"),
     @ApiResponse(responseCode = "404", description = "Тип не найден")
   })
   @PostMapping
@@ -69,7 +69,7 @@ public class LeaveRequestController {
     return service.update(id, body);
   }
 
-  @Operation(summary = "Одобрить заявку")
+  @Operation(summary = "Утвердить заявку")
   @ApiResponses({
     @ApiResponse(responseCode = "200"),
     @ApiResponse(responseCode = "400"),
@@ -110,13 +110,13 @@ public class LeaveRequestController {
             .doOnSuccess(saved -> publisher.leaveCanceled(saved.getId(), saved));
   }
 
-  @Operation(summary = "Заявки сотрудника (пагинация)")
+  @Operation(summary = "Список заявок сотрудника")
   @ApiResponse(
       responseCode = "200",
       headers =
           @Header(
               name = "X-Total-Count",
-              description = "Общее количество записей",
+              description = "Общее количество заявок",
               schema = @Schema(type = "integer")))
   @GetMapping("/by-employee/{employeeId}")
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR') || @perm.isSelf(authentication,#employeeId)")
@@ -128,13 +128,13 @@ public class LeaveRequestController {
             .thenMany(service.listByEmployee(employeeId, p));
   }
 
-  @Operation(summary = "Заявки по статусу (пагинация)")
+  @Operation(summary = "Список заявок по статусу")
   @ApiResponse(
       responseCode = "200",
       headers =
           @Header(
               name = "X-Total-Count",
-              description = "Общее количество записей",
+              description = "Общее количество заявок",
               schema = @Schema(type = "integer")))
   @GetMapping
   @PreAuthorize("@perm.hasAny(authentication,'ORG_ADMIN','HR')")

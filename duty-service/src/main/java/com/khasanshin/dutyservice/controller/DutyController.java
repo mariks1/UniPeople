@@ -1,9 +1,9 @@
 package com.khasanshin.dutyservice.controller;
 
+import com.khasanshin.dutyservice.application.DutyAssignmentUseCase;
+import com.khasanshin.dutyservice.application.DutyUseCase;
 import com.khasanshin.dutyservice.dto.*;
 import com.khasanshin.dutyservice.event.DutyEventPublisher;
-import com.khasanshin.dutyservice.service.DutyAssignmentService;
-import com.khasanshin.dutyservice.service.DutyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,8 +26,8 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Duty", description = "Справочник обязанностей и назначения в департаментах")
 public class DutyController {
 
-  private final DutyService service;
-  private final DutyAssignmentService assignmentService;
+  private final DutyUseCase service;
+  private final DutyAssignmentUseCase assignmentService;
   private final DutyEventPublisher publisher;
 
   @Operation(

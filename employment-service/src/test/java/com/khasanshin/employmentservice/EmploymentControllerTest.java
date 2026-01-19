@@ -3,7 +3,7 @@ package com.khasanshin.employmentservice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.khasanshin.employmentservice.controller.EmploymentController;
 import com.khasanshin.employmentservice.dto.*;
-import com.khasanshin.employmentservice.service.EmploymentService;
+import com.khasanshin.employmentservice.application.EmploymentUseCase;
 import com.khasanshin.employmentservice.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,7 @@ class EmploymentControllerTest {
     @Autowired WebTestClient webTestClient;
     @Autowired ObjectMapper mapper;
 
-    @MockitoBean EmploymentService service;
+    @MockitoBean EmploymentUseCase service;
 
     @BeforeEach
     void mockJwtDefault() {

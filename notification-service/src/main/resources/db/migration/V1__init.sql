@@ -1,4 +1,5 @@
 create schema if not exists notif;
+create extension if not exists "pgcrypto";
 
 create table if not exists notif.notification_event (
                                                         id uuid primary key default gen_random_uuid(),

@@ -1,13 +1,14 @@
 package com.khasanshin.leaveservice;
 
+import com.khasanshin.leaveservice.application.LeaveRequestUseCase;
 import com.khasanshin.leaveservice.controller.LeaveRequestController;
 import com.khasanshin.leaveservice.dto.CreateLeaveRequestDto;
 import com.khasanshin.leaveservice.dto.DecisionDto;
 import com.khasanshin.leaveservice.dto.LeaveRequestDto;
 import com.khasanshin.leaveservice.dto.UpdateLeaveRequestDto;
-import com.khasanshin.leaveservice.entity.LeaveRequest;
+import com.khasanshin.leaveservice.domain.model.LeaveRequest;
+import com.khasanshin.leaveservice.event.LeaveEventPublisher;
 import com.khasanshin.leaveservice.exception.GlobalExceptionHandler;
-import com.khasanshin.leaveservice.service.LeaveService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,10 @@ class LeaveRequestControllerTest {
     WebTestClient web;
 
     @MockitoBean
-    LeaveService service;
+    LeaveRequestUseCase service;
+
+    @MockitoBean
+    LeaveEventPublisher publisher;
 
     @BeforeEach
     void mockJwtDefault() {
@@ -49,7 +53,7 @@ class LeaveRequestControllerTest {
                         .authorities(new SimpleGrantedAuthority("ROLE_HR"))
                         .jwt(j -> j.claim("roles", List.of("HR")))
         )
-        .mutateWith(csrf());;
+        .mutateWith(csrf());
     }
 
     @Test

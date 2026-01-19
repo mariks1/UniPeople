@@ -1,10 +1,11 @@
 package com.khasanshin.organizationservice.mapper;
 
+import com.khasanshin.organizationservice.domain.model.Faculty;
 import com.khasanshin.organizationservice.dto.CreateFacultyDto;
 import com.khasanshin.organizationservice.dto.FacultyDto;
 import com.khasanshin.organizationservice.dto.UpdateFacultyDto;
-import com.khasanshin.organizationservice.entity.Faculty;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface FacultyMapper {
@@ -12,9 +13,12 @@ public interface FacultyMapper {
   FacultyDto toDto(Faculty faculty);
 
   @Mapping(target = "id", ignore = true)
-  Faculty toEntity(CreateFacultyDto facultyDto);
+  Faculty toDomain(CreateFacultyDto facultyDto);
 
-  @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-  @Mapping(target = "id", ignore = true)
-  void updateEntity(UpdateFacultyDto dto, @MappingTarget Faculty e);
+  default Faculty updateDomain(UpdateFacultyDto dto, Faculty e) {
+    Faculty.FacultyBuilder builder = e.toBuilder();
+    if (dto.getName() != null) builder.name(dto.getName());
+    if (dto.getCode() != null) builder.code(dto.getCode());
+    return builder.build();
+  }
 }
