@@ -13,10 +13,13 @@ import org.springframework.util.backoff.FixedBackOff;
 public class KafkaConfig {
 
     @Bean
-    public DefaultErrorHandler errorHandler(KafkaTemplate<String, String> template) {
+    public DefaultErrorHandler errorHandler(
+            KafkaTemplate<String, String> template,
+            @Value("${kafka.topics.dlq:notification.dlq}") String dlqTopic
+    ) {
         DeadLetterPublishingRecoverer recoverer =
                 new DeadLetterPublishingRecoverer(template,
-                        (record, ex) -> new TopicPartition("notification.dlq", record.partition()));
+                        (record, ex) -> new TopicPartition(dlqTopic, record.partition()));
 
         DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, new FixedBackOff(1000L, 3));
         handler.addNotRetryableExceptions(IllegalArgumentException.class);
