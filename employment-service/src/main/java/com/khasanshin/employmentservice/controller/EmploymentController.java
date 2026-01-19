@@ -91,7 +91,7 @@ public class EmploymentController {
           ServerHttpResponse response) {
 
       int p = Math.max(page, 0);
-      int s = Math.min(Math.max(size, 1), 200);
+      int s = Math.min(Math.max(size, 1), 50);
       response.beforeCommit(() ->
               employmentService.countByEmployee(employeeId)
                       .doOnNext(total -> response.getHeaders().set("X-Total-Count", String.valueOf(total)))
@@ -121,7 +121,7 @@ public class EmploymentController {
           ServerHttpResponse response) {
 
       int p = Math.max(page, 0);
-      int s = Math.min(Math.max(size, 1), 200);
+      int s = Math.min(Math.max(size, 1), 50);
       response.beforeCommit(() ->
               employmentService.countByDepartment(departmentId, active)
                       .doOnNext(total -> response.getHeaders().set("X-Total-Count", String.valueOf(total)))

@@ -76,7 +76,8 @@ public class EmployeeController {
   public ResponseEntity<Map<String, Object>> stream(
       @RequestParam(name = "cursor", required = false) Instant cursor,
       @RequestParam(name = "size", defaultValue = "20") int size) {
-    Map<String, Object> body = employeeService.stream(cursor, size);
+    int s = Math.min(Math.max(size, 1), 50);
+    Map<String, Object> body = employeeService.stream(cursor, s);
     return ResponseEntity.ok(body);
   }
 
