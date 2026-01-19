@@ -18,6 +18,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -28,13 +29,15 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.cloud.config.enabled=false",
         "eureka.client.enabled=false",
-        "spring.main.allow-bean-definition-overriding=true"
+        "spring.main.allow-bean-definition-overriding=true",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration,org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration"
 })
 @Import(TestSecurityConfig.class)
 @Testcontainers
@@ -61,6 +64,7 @@ class FileServiceE2EIT {
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry registry) {
+        Startables.deepStart(Stream.of(postgres, minio)).join();
         registry.add("spring.r2dbc.url", () ->
                 "r2dbc:postgresql://" + postgres.getHost() + ":" + postgres.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT) + "/" + postgres.getDatabaseName());
         registry.add("spring.r2dbc.username", postgres::getUsername);
@@ -84,6 +88,7 @@ class FileServiceE2EIT {
     void createBucket() {
         S3Client client = S3Client.builder()
                 .endpointOverride(URI.create("http://" + minio.getHost() + ":" + minio.getMappedPort(9000)))
+                .forcePathStyle(true)
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("minio", "minio12345")))
                 .region(Region.US_EAST_1)
                 .build();
@@ -121,8 +126,8 @@ class FileServiceE2EIT {
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody()
-                .jsonPath("$.ownerId").isEqualTo(ownerId.toString())
-                .jsonPath("$.originalName").isEqualTo("hello.txt");
+                .jsonPath("$.owner_id").isEqualTo(ownerId.toString())
+                .jsonPath("$.original_name").isEqualTo("hello.txt");
 
         var response = webTestClient.get()
                 .uri("/api/v1/files?owner_id={owner}", ownerId)
